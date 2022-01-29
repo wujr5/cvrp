@@ -1,4 +1,3 @@
-
 import os
 import io
 import random
@@ -12,12 +11,11 @@ from json import load, dump
 from deap import base, creator, tools, algorithms, benchmarks
 from deap.benchmarks.tools import diversity, convergence, hypervolume
 
-
 BASE_DIR = os.path.abspath(os.path.dirname(os.path.dirname(__file__)))
 
-
-
 # Load the given problem, which can be a json file
+
+
 def load_instance(json_file):
     """
     Inputs: path to json file
@@ -28,8 +26,9 @@ def load_instance(json_file):
             return load(file_object)
     return None
 
-
 # Take a route of given length, divide it into subroute where each subroute is assigned to vehicle
+
+
 def routeToSubroute(individual, instance):
     """
     Inputs: Sequence of customers that a route has
@@ -42,7 +41,7 @@ def routeToSubroute(individual, instance):
     vehicle_load = 0
     last_customer_id = 0
     vehicle_capacity = instance['vehicle_capacity']
-    
+
     for customer_id in individual:
         # print(customer_id)
         demand = instance[f"customer_{customer_id}"]["demand"]
@@ -56,7 +55,7 @@ def routeToSubroute(individual, instance):
             route.append(sub_route)
             sub_route = [customer_id]
             vehicle_load = demand
-        
+
         last_customer_id = customer_id
 
     if sub_route != []:
@@ -122,21 +121,78 @@ def getRouteCost(individual, instance, unit_cost=1):
             sub_route_distance += distance
             # Update last_customer_id to the new one
             last_customer_id = customer_id
-        
+
         # After adding distances in subroute, adding the route cost from last customer to depot
         # that is 0
-        sub_route_distance = sub_route_distance + instance["distance_matrix"][last_customer_id][0]
+        sub_route_distance = sub_route_distance + \
+            instance["distance_matrix"][last_customer_id][0]
 
         # Cost for this particular sub route
-        sub_route_transport_cost = unit_cost*sub_route_distance
+        sub_route_transport_cost = unit_cost * sub_route_distance
 
         # Adding this to total cost
         total_cost = total_cost + sub_route_transport_cost
-    
+
     return total_cost
 
 
+def getSatisfaction(individual, instance):
+    speed = 30  # 行驶速度
+    left_edge = 5  # 可容忍早到时间
+    right_edge = 5  # 可容忍迟到时间
+
+    total_satisfaction = 0
+    updated_route = routeToSubroute(individual, instance)
+
+    for sub_route in updated_route:
+        # 记录上一个顾客点 id，默认从配送点出发
+        last_customer_id = 0
+        # 当前路线的总满意度
+        sub_satisfaction = 0
+        # 当前路线的耗时
+        sub_time_cost = 0
+
+        for customer_id in sub_route:
+            # 顾客点
+            customer = instance["customer_" + str(customer_id)]
+            # 行驶距离
+            distance = instance["distance_matrix"][last_customer_id][customer_id]
+            # 耗时
+            sub_time_cost = sub_time_cost + distance / speed
+
+            # 早到 left_edge 分钟内
+            if sub_time_cost >= (customer['ready_time'] - left_edge) and sub_time_cost < customer['ready_time']:
+                sub_satisfaction = 100 * \
+                    (1 - (customer['ready_time'] - sub_time_cost) / left_edge)
+            # 早到
+            elif sub_time_cost < customer['ready_time']:
+                sub_satisfaction = 0
+            # 刚好
+            elif sub_time_cost >= customer['ready_time'] and sub_time_cost <= customer['due_time']:
+                sub_satisfaction = 100
+            # 迟到 right_edge 分钟内
+            elif sub_time_cost > customer['due_time'] and sub_time_cost <= (customer['due_time'] + right_edge):
+                sub_satisfaction = 100 * \
+                    (1 - (sub_time_cost - customer['due_time']) / right_edge)
+            # 迟到
+            elif sub_time_cost > customer['due_time']:
+                sub_satisfaction = 0
+
+            # 加上服务时间
+            sub_time_cost += customer['service_time']
+
+            # Update last_customer_id to the new one
+            last_customer_id = customer_id
+
+        # Adding this to total cost
+        total_satisfaction = total_satisfaction + sub_satisfaction
+
+    return total_satisfaction / instance['Number_of_customers']
+
+
 # Get the fitness of a given route
+
+
 def eval_indvidual_fitness(individual, instance, unit_cost):
     """
     Inputs: individual route as a sequence
@@ -147,23 +203,26 @@ def eval_indvidual_fitness(individual, instance, unit_cost):
 
     # we have to minimize number of vehicles
     # TO calculate req vechicles for given route
-    vehicles = getNumVehiclesRequired(individual, instance)
+    vehicles = getNumVehiclesRequired(individual, instance) * 5
 
     # we also have to minimize route cost for all the vehicles
     route_cost = getRouteCost(individual, instance, unit_cost)
 
-    return (vehicles, route_cost)
+    # 获取满意度
+    satisfaction = getSatisfaction(individual, instance)
 
-
+    return (vehicles + route_cost, satisfaction)
 
 # Crossover method with ordering
 # This method will let us escape illegal routes with multiple occurences
 #   of customers that might happen. We would never get illegal individual from this
 #   crossOver
+
+
 def cxOrderedVrp(input_ind1, input_ind2):
     # Modifying this to suit our needs
     #  If the sequence does not contain 0, this throws error
-    #  So we will modify inputs here itself and then 
+    #  So we will modify inputs here itself and then
     #       modify the outputs too
 
     ind1 = [x-1 for x in input_ind1]
@@ -220,7 +279,6 @@ def mutationShuffle(individual, indpb):
     return individual,
 
 
-
 ## Statistics and Logging
 
 def createStatsObjs():
@@ -257,8 +315,7 @@ def recordStat(invalid_ind, logbook, pop, stats, gen):
     print(logbook.stream)
 
 
-
-## Exporting CSV files
+# Exporting CSV files
 
 def exportCsv(csv_file_name, logbook):
     csv_columns = logbook[0].keys()
@@ -284,23 +341,28 @@ class nsgaAlgo(object):
         self.num_gen = 150
         self.toolbox = base.Toolbox()
         self.logbook, self.stats = createStatsObjs()
+        print(self.json_instance)
         self.createCreators()
 
     def createCreators(self):
-        creator.create('FitnessMin', base.Fitness, weights=(-1.0, -1.0))
+        creator.create('FitnessMin', base.Fitness, weights=(-1.0, 1.0))
         creator.create('Individual', list, fitness=creator.FitnessMin)
 
         # Registering toolbox
-        self.toolbox.register('indexes', random.sample, range(1, self.ind_size + 1), self.ind_size)
+        self.toolbox.register('indexes', random.sample, range(
+            1, self.ind_size + 1), self.ind_size)
 
         # Creating individual and population from that each individual
-        self.toolbox.register('individual', tools.initIterate, creator.Individual, self.toolbox.indexes)
-        self.toolbox.register('population', tools.initRepeat, list, self.toolbox.individual)
+        self.toolbox.register('individual', tools.initIterate,
+                              creator.Individual, self.toolbox.indexes)
+        self.toolbox.register('population', tools.initRepeat,
+                              list, self.toolbox.individual)
 
         # Creating evaluate function using our custom fitness
         #   toolbox.register is partial, *args and **kwargs can be given here
         #   and the rest of args are supplied in code
-        self.toolbox.register('evaluate', eval_indvidual_fitness, instance=self.json_instance, unit_cost=1)
+        self.toolbox.register('evaluate', eval_indvidual_fitness,
+                              instance=self.json_instance, unit_cost=1)
 
         # Selection method
         self.toolbox.register("select", tools.selNSGA2)
@@ -310,7 +372,6 @@ class nsgaAlgo(object):
 
         # Mutation method
         self.toolbox.register("mutate", mutationShuffle, indpb=self.mut_prob)
-
 
     def generatingPopFitness(self):
         self.pop = self.toolbox.population(n=self.pop_size)
@@ -322,8 +383,7 @@ class nsgaAlgo(object):
 
         self.pop = self.toolbox.select(self.pop, len(self.pop))
 
-        recordStat(self.invalid_ind, self.logbook, self.pop, self.stats, gen = 0)
-
+        recordStat(self.invalid_ind, self.logbook, self.pop, self.stats, gen=0)
 
     def runGenerations(self):
         # Running algorithm for given number of generations
@@ -333,7 +393,8 @@ class nsgaAlgo(object):
             # Selecting individuals
             # Selecting offsprings from the population, about 1/2 of them
             self.offspring = tools.selTournamentDCD(self.pop, len(self.pop))
-            self.offspring = [self.toolbox.clone(ind) for ind in self.offspring]
+            self.offspring = [self.toolbox.clone(
+                ind) for ind in self.offspring]
 
             # Performing , crossover and mutation operations according to their probabilities
             for ind1, ind2 in zip(self.offspring[::2], self.offspring[1::2]):
@@ -349,20 +410,23 @@ class nsgaAlgo(object):
                 self.toolbox.mutate(ind2)
 
             # Calculating fitness for all the invalid individuals in offspring
-            self.invalid_ind = [ind for ind in self.offspring if not ind.fitness.valid]
-            self.fitnesses = self.toolbox.map(self.toolbox.evaluate, self.invalid_ind)
+            self.invalid_ind = [
+                ind for ind in self.offspring if not ind.fitness.valid]
+            self.fitnesses = self.toolbox.map(
+                self.toolbox.evaluate, self.invalid_ind)
             for ind, fit in zip(self.invalid_ind, self.fitnesses):
                 ind.fitness.values = fit
 
             # Recalcuate the population with newly added offsprings and parents
             # We are using NSGA2 selection method, We have to select same population size
-            self.pop = self.toolbox.select(self.pop + self.offspring, self.pop_size)
+            self.pop = self.toolbox.select(
+                self.pop + self.offspring, self.pop_size)
 
             # Recording stats in this generation
-            recordStat(self.invalid_ind, self.logbook, self.pop, self.stats, gen + 1)
+            recordStat(self.invalid_ind, self.logbook,
+                       self.pop, self.stats, gen + 1)
 
         print(f"{20 * '#'} End of Generations {20 * '#'} ")
-
 
     def getBestInd(self):
         self.best_individual = tools.selBest(self.pop, 1)[0]
@@ -390,12 +454,11 @@ class nsgaAlgo(object):
         self.doExport()
 
 
-
 def nsga2vrp():
 
     # Loading the instance
     json_instance = load_instance('./data/json/Input_Data.json')
-    
+
     # Getting number of customers to get individual size
     ind_size = json_instance['Number_of_customers']
 
@@ -408,22 +471,24 @@ def nsga2vrp():
     # Number of generations to run
     num_gen = 220
 
-    # Developing Deap algorithm from base problem    
+    # Developing Deap algorithm from base problem
     creator.create('FitnessMin', base.Fitness, weights=(-1.0, -1.0))
     creator.create('Individual', list, fitness=creator.FitnessMin)
 
     # Registering toolbox
     toolbox = base.Toolbox()
-    toolbox.register('indexes', random.sample, range(1,ind_size+1), ind_size)
+    toolbox.register('indexes', random.sample, range(1, ind_size+1), ind_size)
 
     # Creating individual and population from that each individual
-    toolbox.register('individual', tools.initIterate, creator.Individual, toolbox.indexes)
+    toolbox.register('individual', tools.initIterate,
+                     creator.Individual, toolbox.indexes)
     toolbox.register('population', tools.initRepeat, list, toolbox.individual)
-    
+
     # Creating evaluate function using our custom fitness
     #   toolbox.register is partial, *args and **kwargs can be given here
     #   and the rest of args are supplied in code
-    toolbox.register('evaluate', eval_indvidual_fitness, instance=json_instance, unit_cost = 1)
+    toolbox.register('evaluate', eval_indvidual_fitness,
+                     instance=json_instance, unit_cost=1)
 
     # Selection method
     toolbox.register("select", tools.selNSGA2)
@@ -432,16 +497,16 @@ def nsga2vrp():
     toolbox.register("mate", cxOrderedVrp)
 
     # Mutation method
-    toolbox.register("mutate", mutationShuffle, indpb = mut_prob)
+    toolbox.register("mutate", mutationShuffle, indpb=mut_prob)
 
     # Creating logbook and Stats object, We are going to use them to record data
     logbook, stats = createStatsObjs()
 
-    ### Starting ga process
+    # Starting ga process
     print(f"Generating population with size of {pop_size}")
     pop = toolbox.population(n=pop_size)
 
-    ## Print Checks
+    # Print Checks
     # print(len(pop))
     # print(f"First element of pop is {pop[0]}")
 
@@ -449,7 +514,7 @@ def nsga2vrp():
     invalid_ind = [ind for ind in pop if not ind.fitness.valid]
 
     # Print checks
-    # print(f"Length of invalid_ind is {len(invalid_ind)}")    
+    # print(f"Length of invalid_ind is {len(invalid_ind)}")
 
     # Evaluate the population, making list for same size as population
     fitnesses = list(map(toolbox.evaluate, invalid_ind))
@@ -466,13 +531,12 @@ def nsga2vrp():
     # Assigning fitness attribute to each of the individual with the calculated one
     for ind, fit in zip(invalid_ind, fitnesses):
         ind.fitness.values = fit
-    
+
     # Print Checks
     # Check if invalid indiviudals are there, Should return 0, since we have assigned fitness
     #       to each one
     # print(f"Invalidity check {not invalid_ind[0].fitness.valid}")
     # print(f"Individuals with invalid fitness {len([ind for ind in invalid_ind if not ind.fitness.valid])}")
-
 
     # Assigning crowding distance using NSGA selection process, no selection is done here
     pop = toolbox.select(pop, len(pop))
@@ -485,7 +549,7 @@ def nsga2vrp():
     # After generating population and assiging fitness to them
     # Recording Logs and Stats
     print("Recording the Data and Statistics")
-    recordStat(invalid_ind, logbook, pop, stats,gen=0)
+    recordStat(invalid_ind, logbook, pop, stats, gen=0)
 
     # Starting the generation process
     for gen in range(num_gen):
@@ -509,10 +573,9 @@ def nsga2vrp():
 
                 # If cross over happened to the individuals then we are deleting those individual
                 #   fitness values, This operations are being done on the offspring population.
-                del ind1.fitness.values, ind2.fitness.values                 
+                del ind1.fitness.values, ind2.fitness.values
             toolbox.mutate(ind1)
             toolbox.mutate(ind2)
-   
 
         # Print Checks
         # print(f"The len of offspring after operations {len(offspring)}")
@@ -523,15 +586,13 @@ def nsga2vrp():
         fitnesses = toolbox.map(toolbox.evaluate, invalid_ind)
         for ind, fit in zip(invalid_ind, fitnesses):
             ind.fitness.values = fit
-        
 
         # Recalcuate the population with newly added offsprings and parents
         # We are using NSGA2 selection method, We have to select same population size
         pop = toolbox.select(pop + offspring, pop_size)
 
-
         # Recording stats in this generation
-        recordStat(invalid_ind, logbook, pop, stats,gen+1)
+        recordStat(invalid_ind, logbook, pop, stats, gen+1)
 
     print(f"{20*'#'} End of Generations {20*'#'} ")
 
@@ -539,8 +600,10 @@ def nsga2vrp():
 
     # Printing the best after all generations
     print(f"Best individual is {best_individual}")
-    print(f"Number of vechicles required are {best_individual.fitness.values[0]}")
-    print(f"Cost required for the transportation is {best_individual.fitness.values[1]}")
+    print(
+        f"Number of vechicles required are {best_individual.fitness.values[0]}")
+    print(
+        f"Cost required for the transportation is {best_individual.fitness.values[1]}")
 
     # Printing the route from the best individual
     printRoute(routeToSubroute(best_individual, json_instance))
@@ -569,16 +632,13 @@ if __name__ == "__main__":
     # someinstance.testFunc()
 
 
-
-
-
-
 def testcosts():
     # Sample instance
     test_instance = load_instance('./data/json/Input_Data.json')
 
     # Sample individual
-    sample_individual = [19, 5, 24, 7, 16, 23, 22, 2, 12, 8, 20, 25, 21, 18,11,15, 1, 14, 17, 6, 4, 13, 10, 3, 9]
+    sample_individual = [19, 5, 24, 7, 16, 23, 22, 2, 12, 8,
+                         20, 25, 21, 18, 11, 15, 1, 14, 17, 6, 4, 13, 10, 3, 9]
 
     # Sample individual 2
     sample_ind_2 = random.sample(sample_individual, len(sample_individual))
@@ -586,21 +646,27 @@ def testcosts():
     print(f"Sample individual 2 is {sample_ind_2}")
 
     # Cost for each route
-    print(f"Sample individual cost is {getRouteCost(sample_individual, test_instance, 1)}")
-    print(f"Sample individual 2 cost is {getRouteCost(sample_ind_2, test_instance, 1)}")
+    print(
+        f"Sample individual cost is {getRouteCost(sample_individual, test_instance, 1)}")
+    print(
+        f"Sample individual 2 cost is {getRouteCost(sample_ind_2, test_instance, 1)}")
 
     # Fitness for each route
-    print(f"Sample individual fitness is {eval_indvidual_fitness(sample_individual, test_instance, 1)}")
-    print(f"Sample individual 2 fitness is {eval_indvidual_fitness(sample_ind_2, test_instance, 1)}")
+    print(
+        f"Sample individual fitness is {eval_indvidual_fitness(sample_individual, test_instance, 1)}")
+    print(
+        f"Sample individual 2 fitness is {eval_indvidual_fitness(sample_ind_2, test_instance, 1)}")
+
 
 def testroutes():
     # Sample instance
     test_instance = load_instance('./data/json/Input_Data.json')
 
     # Sample individual
-    sample_individual = [19, 5, 24, 7, 16, 23, 22, 2, 12, 8, 20, 25, 21, 18,11,15, 1, 14, 17, 6, 4, 13, 10, 3, 9]
-    best_ind_300_gen = [16, 14, 12, 10, 15, 17, 21, 23, 11, 9, 8, 20, 18, 19, 13, 22, 25, 24, 5, 3, 4, 6, 7, 1, 2]
-
+    sample_individual = [19, 5, 24, 7, 16, 23, 22, 2, 12, 8,
+                         20, 25, 21, 18, 11, 15, 1, 14, 17, 6, 4, 13, 10, 3, 9]
+    best_ind_300_gen = [16, 14, 12, 10, 15, 17, 21, 23, 11,
+                        9, 8, 20, 18, 19, 13, 22, 25, 24, 5, 3, 4, 6, 7, 1, 2]
 
     # Sample individual 2
     sample_ind_2 = random.sample(sample_individual, len(sample_individual))
@@ -609,21 +675,29 @@ def testroutes():
     print(f"Best individual 300 generations is {best_ind_300_gen}")
 
     # Getting routes
-    print(f"Subroutes for first sample individual is {routeToSubroute(sample_individual, test_instance)}")
-    print(f"Subroutes for second sample indivudal is {routeToSubroute(sample_ind_2, test_instance)}")
-    print(f"Subroutes for best sample indivudal is {routeToSubroute(best_ind_300_gen, test_instance)}")
+    print(
+        f"Subroutes for first sample individual is {routeToSubroute(sample_individual, test_instance)}")
+    print(
+        f"Subroutes for second sample indivudal is {routeToSubroute(sample_ind_2, test_instance)}")
+    print(
+        f"Subroutes for best sample indivudal is {routeToSubroute(best_ind_300_gen, test_instance)}")
 
     # Getting num of vehicles
-    print(f"Vehicles for sample individual {getNumVehiclesRequired(sample_individual, test_instance)}")
-    print(f"Vehicles for second sample individual {getNumVehiclesRequired(sample_ind_2, test_instance)}")
-    print(f"Vehicles for best sample individual {getNumVehiclesRequired(best_ind_300_gen, test_instance)}")
+    print(
+        f"Vehicles for sample individual {getNumVehiclesRequired(sample_individual, test_instance)}")
+    print(
+        f"Vehicles for second sample individual {getNumVehiclesRequired(sample_ind_2, test_instance)}")
+    print(
+        f"Vehicles for best sample individual {getNumVehiclesRequired(best_ind_300_gen, test_instance)}")
+
 
 def testcrossover():
-    ind1 = [3,2,5,1,6,9,8,7,4]
-    ind2 = [7,3,6,1,9,2,4,5,8]
-    anotherind1 = [16, 14, 12, 7, 4, 2, 1, 13, 15, 8, 9, 6, 3, 5, 17, 18, 19, 11, 10, 21, 22, 23, 25, 24, 20]
-    anotherind2 = [21, 22, 23, 25,16, 14, 12, 7, 4, 2, 1, 13, 15, 8, 9, 6, 3, 5, 17, 18, 19, 11, 10, 24, 20]
-
+    ind1 = [3, 2, 5, 1, 6, 9, 8, 7, 4]
+    ind2 = [7, 3, 6, 1, 9, 2, 4, 5, 8]
+    anotherind1 = [16, 14, 12, 7, 4, 2, 1, 13, 15, 8, 9, 6,
+                   3, 5, 17, 18, 19, 11, 10, 21, 22, 23, 25, 24, 20]
+    anotherind2 = [21, 22, 23, 25, 16, 14, 12, 7, 4, 2, 1,
+                   13, 15, 8, 9, 6, 3, 5, 17, 18, 19, 11, 10, 24, 20]
 
     newind7, newind8 = cxOrderedVrp(ind1, ind2)
     newind9, newind10 = cxOrderedVrp(anotherind1, anotherind2)
@@ -636,8 +710,9 @@ def testcrossover():
     print(f"newind9 is {newind9}")
     print(f"newind10 is {newind10}")
 
+
 def testmutation():
-    ind1 = [3,2,5,1,6,9,8,7,4]
+    ind1 = [3, 2, 5, 1, 6, 9, 8, 7, 4]
     mut1 = mutationShuffle(ind1)
 
     print(f"Given individual is {ind1}")

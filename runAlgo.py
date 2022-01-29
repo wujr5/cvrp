@@ -1,6 +1,7 @@
 from nsga_vrp.NSGA2_vrp import *
 import argparse
 
+
 def main():
 
     # Parsing arguments
@@ -15,7 +16,6 @@ def main():
                         help="Mutation Probabilty")
     parser.add_argument('--numGen', type=int, default=200, required=False,
                         help="Number of generations to run")
-
 
     args = parser.parse_args()
 
