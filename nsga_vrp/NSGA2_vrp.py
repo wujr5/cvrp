@@ -1,3 +1,4 @@
+from copy import deepcopy
 import os
 import io
 import random
@@ -5,6 +6,7 @@ import numpy
 import fnmatch
 import csv
 import array
+from functools import cmp_to_key
 
 from csv import DictWriter
 from json import load, dump
@@ -138,8 +140,8 @@ def getRouteCost(individual, instance, unit_cost=1):
 
 def getSatisfaction(individual, instance):
     speed = 30  # 行驶速度
-    left_edge = 5  # 可容忍早到时间
-    right_edge = 5  # 可容忍迟到时间
+    left_edge = 50  # 可容忍早到时间
+    right_edge = 50  # 可容忍迟到时间
 
     total_satisfaction = 0
     updated_route = routeToSubroute(individual, instance)
@@ -162,21 +164,21 @@ def getSatisfaction(individual, instance):
 
             # 早到 left_edge 分钟内
             if sub_time_cost >= (customer['ready_time'] - left_edge) and sub_time_cost < customer['ready_time']:
-                sub_satisfaction = 100 * \
+                sub_satisfaction += 100 * \
                     (1 - (customer['ready_time'] - sub_time_cost) / left_edge)
             # 早到
             elif sub_time_cost < customer['ready_time']:
-                sub_satisfaction = 0
+                sub_satisfaction += 0
             # 刚好
             elif sub_time_cost >= customer['ready_time'] and sub_time_cost <= customer['due_time']:
-                sub_satisfaction = 100
+                sub_satisfaction += 100
             # 迟到 right_edge 分钟内
             elif sub_time_cost > customer['due_time'] and sub_time_cost <= (customer['due_time'] + right_edge):
-                sub_satisfaction = 100 * \
+                sub_satisfaction += 100 * \
                     (1 - (sub_time_cost - customer['due_time']) / right_edge)
             # 迟到
             elif sub_time_cost > customer['due_time']:
-                sub_satisfaction = 0
+                sub_satisfaction += 0
 
             # 加上服务时间
             sub_time_cost += customer['service_time']
@@ -201,17 +203,16 @@ def eval_indvidual_fitness(individual, instance, unit_cost):
     Outputs: Returns a tuple of (Number of vechicles, Route cost from all the vechicles)
     """
 
-    # we have to minimize number of vehicles
-    # TO calculate req vechicles for given route
+    # 用车成本
     vehicles = getNumVehiclesRequired(individual, instance) * 5
 
-    # we also have to minimize route cost for all the vehicles
+    # 路程成本
     route_cost = getRouteCost(individual, instance, unit_cost)
 
     # 获取满意度
     satisfaction = getSatisfaction(individual, instance)
 
-    return (vehicles + route_cost, satisfaction)
+    return (satisfaction, vehicles + route_cost)
 
 # Crossover method with ordering
 # This method will let us escape illegal routes with multiple occurences
@@ -312,10 +313,11 @@ def recordStat(invalid_ind, logbook, pop, stats, gen):
     record["best_one"] = best_individual
     record["fitness_best_one"] = best_individual.fitness
     logbook.record(Generation=gen, evals=len(invalid_ind), **record)
-    print(logbook.stream)
-
+    print(
+        f'迭代：{gen}，满意度：{best_individual.fitness.values[0]}，成本：{best_individual.fitness.values[1]}')
 
 # Exporting CSV files
+
 
 def exportCsv(csv_file_name, logbook):
     csv_columns = logbook[0].keys()
@@ -341,16 +343,19 @@ class nsgaAlgo(object):
         self.num_gen = 150
         self.toolbox = base.Toolbox()
         self.logbook, self.stats = createStatsObjs()
-        print(self.json_instance)
         self.createCreators()
 
     def createCreators(self):
-        creator.create('FitnessMin', base.Fitness, weights=(-1.0, 1.0))
+        creator.create('FitnessMin', base.Fitness, weights=(1.0, -1.0))
         creator.create('Individual', list, fitness=creator.FitnessMin)
 
-        # Registering toolbox
+        # 初始化种群方式：随机
         self.toolbox.register('indexes', random.sample, range(
             1, self.ind_size + 1), self.ind_size)
+
+        # 初始化种群方式：随机抽取顾客点后，根据距离长短
+        # self.toolbox.register('indexes', self.initPopulation, range(
+        #     1, self.ind_size + 1), self.ind_size)
 
         # Creating individual and population from that each individual
         self.toolbox.register('individual', tools.initIterate,
@@ -373,6 +378,37 @@ class nsgaAlgo(object):
         # Mutation method
         self.toolbox.register("mutate", mutationShuffle, indpb=self.mut_prob)
 
+    # 定制的种群初始化方式
+    def initPopulation(self, customers, size):
+        result = []
+        customers = list(customers)
+        instance = self.json_instance
+        capacity = instance['vehicle_capacity']
+
+        # 升序排列
+        def cmp(a, b):
+            return a['d'] - b['d']
+
+        while len(customers) > 0:
+            k = random.sample(customers, 1)[0]
+            result.append(k)
+            customers.remove(k)
+
+            distance_arr = [{'c': i, 'd': instance['distance_matrix'][k][i]}
+                            for i in customers]
+            distance_arr.sort(key=cmp_to_key(cmp))
+
+            sub_capacity = instance['customer_' + str(k)]['demand']
+
+            i = 0
+            while len(customers) > 0 and sub_capacity + distance_arr[i]['d'] <= capacity:
+                result.append(distance_arr[i]['c'])
+                customers.remove(distance_arr[i]['c'])
+                sub_capacity += distance_arr[i]['d']
+                i = i + 1
+
+        return result
+
     def generatingPopFitness(self):
         self.pop = self.toolbox.population(n=self.pop_size)
         self.invalid_ind = [ind for ind in self.pop if not ind.fitness.valid]
@@ -388,7 +424,6 @@ class nsgaAlgo(object):
     def runGenerations(self):
         # Running algorithm for given number of generations
         for gen in range(self.num_gen):
-            print(f"{20*'#'} Currently Evaluating {gen} Generation {20*'#'}")
 
             # Selecting individuals
             # Selecting offsprings from the population, about 1/2 of them
@@ -426,17 +461,13 @@ class nsgaAlgo(object):
             recordStat(self.invalid_ind, self.logbook,
                        self.pop, self.stats, gen + 1)
 
-        print(f"{20 * '#'} End of Generations {20 * '#'} ")
-
     def getBestInd(self):
         self.best_individual = tools.selBest(self.pop, 1)[0]
 
         # Printing the best after all generations
-        print(f"Best individual is {self.best_individual}")
-        print(f"Number of vechicles required are "
-              f"{self.best_individual.fitness.values[0]}")
-        print(f"Cost required for the transportation is "
-              f"{self.best_individual.fitness.values[1]}")
+        print(f"最好的粒子：{self.best_individual}")
+        print(f"满意度：{self.best_individual.fitness.values[0]}")
+        print(f"总成本：{self.best_individual.fitness.values[1]}")
 
         # Printing the route from the best individual
         printRoute(routeToSubroute(self.best_individual, self.json_instance))

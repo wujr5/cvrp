@@ -11,8 +11,10 @@ def getCoordinatesDframe(json_instance):
     num_of_cust = json_instance['Number_of_customers']
     # Getting all customer coordinates
     customer_list = [i for i in range(1, num_of_cust + 1)]
-    x_coord_cust = [json_instance[f'customer_{i}']['coordinates']['x'] for i in customer_list]
-    y_coord_cust = [json_instance[f'customer_{i}']['coordinates']['y'] for i in customer_list]
+    x_coord_cust = [
+        json_instance[f'customer_{i}']['coordinates']['x'] for i in customer_list]
+    y_coord_cust = [
+        json_instance[f'customer_{i}']['coordinates']['y'] for i in customer_list]
     # Getting depot x,y coordinates
     depot_x = [json_instance['depart']['coordinates']['x']]
     depot_y = [json_instance['depart']['coordinates']['y']]
@@ -27,7 +29,7 @@ def getCoordinatesDframe(json_instance):
     return df
 
 
-def plotSubroute(subroute, dfhere,color):
+def plotSubroute(subroute, dfhere, color):
     totalSubroute = [0]+subroute+[0]
     subroutelen = len(subroute)
     for i in range(subroutelen+1):
@@ -43,7 +45,8 @@ def plotRoute(route, csv_title):
     json_instance = load_instance('./data/json/Input_Data.json')
 
     subroutes = routeToSubroute(route, json_instance)
-    colorslist = ["blue","green","red","cyan","magenta","yellow","black","#eeefff"]
+    colorslist = ["blue", "green", "red", "cyan",
+                  "magenta", "yellow", "black", "#f1a03a", "#fbe5e4", "#2568f6"]
     colorindex = 0
 
     # getting df
@@ -71,9 +74,9 @@ def plotRoute(route, csv_title):
     plt.title(csv_title)
     plt.savefig(f"./figures/Route_{csv_title}.png")
 
+
 if __name__ == "__main__":
-    sample_route = [1, 2, 4, 25, 24, 22, 23, 17, 13, 10, 15, 19, 18, 12, 14, 16, 11, 9, 6, 8, 7, 3, 5, 21, 20]
-    plotRoute(sample_route,"Sample_Title")
+    sample_route = [1, 2, 4, 25, 24, 22, 23, 17, 13, 10, 15,
+                    19, 18, 12, 14, 16, 11, 9, 6, 8, 7, 3, 5, 21, 20]
+    plotRoute(sample_route, "Sample_Title")
     plt.show()
-
-
