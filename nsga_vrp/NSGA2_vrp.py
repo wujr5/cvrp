@@ -6,7 +6,7 @@ import numpy
 import csv
 from functools import cmp_to_key
 
-from json import load, dump
+from json import load
 from deap import base, creator, tools
 
 BASE_DIR = os.path.abspath(os.path.dirname(os.path.dirname(__file__)))
