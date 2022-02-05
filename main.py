@@ -19,18 +19,16 @@ def main():
 
     args = parser.parse_args()
 
-    # Initializing instance
     nsgaObj = nsgaAlgo()
 
-    # Setting internal variables
     nsgaObj.pop_size = args.popSize
     nsgaObj.cross_prob = args.crossProb
     nsgaObj.mut_prob = args.mutProb
     nsgaObj.num_gen = args.numGen
 
-    print(f'种群大小：{args.popSize}，交叉率：{args.crossProb}，变异率：{args.mutProb}')
+    print(
+        f'种群大小：{args.popSize}，交叉率：{args.crossProb}，变异率：{args.mutProb}，迭代数：{args.numGen}')
 
-    # Running Algorithm
     nsgaObj.runMain()
 
 

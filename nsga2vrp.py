@@ -9,7 +9,7 @@ from functools import cmp_to_key
 from json import load
 from deap import base, creator, tools
 
-BASE_DIR = os.path.abspath(os.path.dirname(os.path.dirname(__file__)))
+BASE_DIR = os.path.abspath(os.path.dirname(__file__))
 
 
 class nsgaAlgo():
@@ -25,37 +25,40 @@ class nsgaAlgo():
         self.logbook, self.stats = self.createStatsObjs()
         self.createCreators()
 
+    # 设置 deap 库需要使用的各个函数
     def createCreators(self):
+        # 适应值函数
         creator.create('FitnessMin', base.Fitness, weights=(-1.0, -1.0))
+        # 创建个体容器
         creator.create('Individual', list, fitness=creator.FitnessMin)
 
         # 初始化种群方式：随机
-        # self.toolbox.register('indexes', random.sample, range(
-        #     1, self.ind_size + 1), self.ind_size)
-
-        # 初始化种群方式：随机抽取顾客点后，根据距离长短
-        self.toolbox.register('indexes', self.initPopulation, range(
+        self.toolbox.register('indexes', random.sample, range(
             1, self.ind_size + 1), self.ind_size)
 
-        # Creating individual and population from that each individual
+        # 初始化种群方式：随机抽取顾客点后，根据距离长短
+        # self.toolbox.register('indexes', self.initPopulation, range(
+        #     1, self.ind_size + 1), self.ind_size)
+
+        # 个体初始化函数
         self.toolbox.register('individual', tools.initIterate,
                               creator.Individual, self.toolbox.indexes)
+
+        # 种群初始化函数
         self.toolbox.register('population', tools.initRepeat,
                               list, self.toolbox.individual)
 
-        # Creating evaluate function using our custom fitness
-        #   toolbox.register is partial, *args and **kwargs can be given here
-        #   and the rest of args are supplied in code
+        # 设置适应值计算函数
         self.toolbox.register('evaluate', self.eval_indvidual_fitness,
                               instance=self.json_instance, unit_cost=1)
 
-        # Selection method
+        # 设置选择算法
         self.toolbox.register("select", tools.selNSGA2)
 
-        # Crossover method
+        # 设置交配算法
         self.toolbox.register("mate", self.cxOrderedVrp)
 
-        # Mutation method
+        # 设置变异算法
         self.toolbox.register(
             "mutate", self.mutationShuffle, indpb=self.mut_prob)
 
@@ -457,7 +460,7 @@ class nsgaAlgo():
                 for data in logbook:
                     writer.writerow(data)
         except IOError:
-            print("I/O error")
+            print("I/O error: ", csv_path, csv_file_name)
 
     def runMain(self):
         self.generatingPopFitness()
