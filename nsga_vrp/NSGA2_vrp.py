@@ -195,7 +195,7 @@ def eval_indvidual_fitness(individual, instance, unit_cost):
     """
 
     # 用车成本
-    vehicles = getNumVehiclesRequired(individual, instance) * 5
+    vehicles = getNumVehiclesRequired(individual, instance)
 
     # 路程成本
     route_cost = getRouteCost(individual, instance, unit_cost)
@@ -203,7 +203,8 @@ def eval_indvidual_fitness(individual, instance, unit_cost):
     # 获取满意度
     satisfaction = getSatisfaction(individual, instance)
 
-    return (1 / satisfaction * 100, vehicles + route_cost)
+    # return (1 / satisfaction * 100, vehicles + route_cost)
+    return (vehicles, route_cost)
 
 # Crossover method with ordering
 # This method will let us escape illegal routes with multiple occurences
@@ -212,6 +213,7 @@ def eval_indvidual_fitness(individual, instance, unit_cost):
 
 
 def cxOrderedVrp(input_ind1, input_ind2):
+
     # Modifying this to suit our needs
     #  If the sequence does not contain 0, this throws error
     #  So we will modify inputs here itself and then
@@ -224,7 +226,6 @@ def cxOrderedVrp(input_ind1, input_ind2):
     if a > b:
         a, b = b, a
 
-    # print(f"The cutting points are {a} and {b}")
     holes1, holes2 = [True] * size, [True] * size
     for i in range(size):
         if i < a or i > b:
@@ -250,6 +251,7 @@ def cxOrderedVrp(input_ind1, input_ind2):
     # Finally adding 1 again to reclaim original input
     ind1 = [x+1 for x in ind1]
     ind2 = [x+1 for x in ind2]
+
     return ind1, ind2
 
 
@@ -305,7 +307,7 @@ def recordStat(invalid_ind, logbook, pop, stats, gen):
     record["fitness_best_one"] = best_individual.fitness
     logbook.record(Generation=gen, evals=len(invalid_ind), **record)
     print(
-        f'迭代：{gen}，满意度：{best_individual.fitness.values[0]}，成本：{best_individual.fitness.values[1]}')
+        f'迭代：{gen}，车辆：{best_individual.fitness.values[0]}，距离：{best_individual.fitness.values[1]}')
 
 # Exporting CSV files
 
@@ -457,8 +459,8 @@ class nsgaAlgo(object):
 
         # Printing the best after all generations
         print(f"最好的粒子：{self.best_individual}")
-        print(f"满意度：{self.best_individual.fitness.values[0]}")
-        print(f"总成本：{self.best_individual.fitness.values[1]}")
+        print(f"车辆：{self.best_individual.fitness.values[0]}")
+        print(f"距离：{self.best_individual.fitness.values[1]}")
 
         # Printing the route from the best individual
         printRoute(routeToSubroute(self.best_individual, self.json_instance))
