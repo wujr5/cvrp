@@ -33,12 +33,12 @@ class nsgaAlgo():
         creator.create('Individual', list, fitness=creator.FitnessMin)
 
         # 初始化种群方式：随机
-        self.toolbox.register('indexes', random.sample, range(
-            1, self.ind_size + 1), self.ind_size)
+        # self.toolbox.register('indexes', random.sample, range(
+        #     1, self.ind_size + 1), self.ind_size)
 
         # 初始化种群方式：随机抽取顾客点后，根据距离长短
-        # self.toolbox.register('indexes', self.initPopulation, range(
-        #     1, self.ind_size + 1), self.ind_size)
+        self.toolbox.register('indexes', self.initPopulation, range(
+            1, self.ind_size + 1), self.ind_size)
 
         # 个体初始化函数
         self.toolbox.register('individual', tools.initIterate,
@@ -56,11 +56,11 @@ class nsgaAlgo():
         self.toolbox.register("select", tools.selNSGA2)
 
         # 设置交配算法
-        self.toolbox.register("mate", self.cxOrderedVrp)
+        self.toolbox.register("mate", self.crossOverVrp)
 
         # 设置变异算法
         self.toolbox.register(
-            "mutate", self.mutationShuffle, indpb=self.mut_prob)
+            "mutate", self.mutation, indpb=self.mut_prob)
 
     # 定制的种群初始化方式
     def initPopulation(self, customers, size):
@@ -170,8 +170,7 @@ class nsgaAlgo():
                 return load(file_object)
         return None
 
-    # Take a route of given length, divide it into subroute where each subroute is assigned to vehicle
-
+    # 返回带子路径的二维数组
     def routeToSubroute(self, individual, instance):
         """
         Inputs: Sequence of customers that a route has
@@ -220,7 +219,7 @@ class nsgaAlgo():
 
     # 计算个体的车辆数
 
-    def getNumVehiclesRequired(self, individual, instance):
+    def getVehicleNum(self, individual, instance):
         """
         Inputs: Individual route
                 Json file object loaded instance
@@ -235,7 +234,7 @@ class nsgaAlgo():
 
     def getRouteCost(self, individual, instance, unit_cost=1):
         """
-        Inputs : 
+        Inputs: 
             - Individual route
             - Problem instance, json file that is loaded
             - Unit cost for the route (can be petrol etc)
@@ -338,7 +337,7 @@ class nsgaAlgo():
         """
 
         # 用车成本
-        vehicles = self.getNumVehiclesRequired(individual, instance)
+        vehicles = self.getVehicleNum(individual, instance)
 
         # 路程成本
         route_cost = self.getRouteCost(individual, instance, unit_cost)
@@ -349,17 +348,7 @@ class nsgaAlgo():
         # return (1 / satisfaction * 100, vehicles + route_cost)
         return (vehicles, route_cost)
 
-    # Crossover method with ordering
-    # This method will let us escape illegal routes with multiple occurences
-    #   of customers that might happen. We would never get illegal individual from this
-    #   crossOver
-
-    def cxOrderedVrp(self, input_ind1, input_ind2):
-
-        # Modifying this to suit our needs
-        #  If the sequence does not contain 0, this throws error
-        #  So we will modify inputs here itself and then
-        #       modify the outputs too
+    def crossOverVrp(self, input_ind1, input_ind2):
 
         ind1 = [x-1 for x in input_ind1]
         ind2 = [x-1 for x in input_ind2]
@@ -396,7 +385,7 @@ class nsgaAlgo():
 
         return ind1, ind2
 
-    def mutationShuffle(self, individual, indpb):
+    def mutation(self, individual, indpb):
         """
         Inputs : Individual route
                 Probability of mutation betwen (0,1)
