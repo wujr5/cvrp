@@ -1,4 +1,4 @@
-from nsga_vrp.NSGA2_vrp import *
+from nsga2vrp import *
 import argparse
 
 
@@ -8,7 +8,7 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--instance_name', type=str, default="./data/json/C101.json", required=False,
                         help="Enter the input Json file name")
-    parser.add_argument('--popSize', type=int, default=100, required=False,
+    parser.add_argument('--popSize', type=int, default=180, required=False,
                         help="Enter the population size")
     parser.add_argument('--crossProb', type=float, default=0.9, required=False,
                         help="Crossover Probability")
@@ -23,7 +23,6 @@ def main():
     nsgaObj = nsgaAlgo()
 
     # Setting internal variables
-    nsgaObj.json_instance = load_instance(args.instance_name)
     nsgaObj.pop_size = args.popSize
     nsgaObj.cross_prob = args.crossProb
     nsgaObj.mut_prob = args.mutProb

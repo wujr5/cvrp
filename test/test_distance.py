@@ -1,7 +1,7 @@
 import unittest
 import math
 from nsga_vrp.utils import calculate_distance
-from nsga_vrp.NSGA2_vrp import load_instance
+from NSGA2_vrp import load_instance
 
 
 class TestDistance(unittest.TestCase):
@@ -15,6 +15,7 @@ class TestDistance(unittest.TestCase):
         calculated_result = calculate_distance(cust7, cust8)
         math_result = math.sqrt((40-38)**2 + (66-68)**2)
         self.assertEqual(calculated_result, math_result)
+
 
 if __name__ == '__main__':
     unittest.main()

@@ -13,7 +13,7 @@ def calculate_distance(customer1, customer2):
     Inputs: customer1 from json object, customer2 from json object
     Outputs: Returns Euclidian distance between these customer locations.
     """
-    return ((customer1['coordinates']['x'] - customer2['coordinates']['x']) ** 2 + \
+    return ((customer1['coordinates']['x'] - customer2['coordinates']['x']) ** 2 +
             (customer1['coordinates']['y'] - customer2['coordinates']['y']) ** 2) ** 0.5
 
 
@@ -29,7 +29,7 @@ def converttext2json():
     print(f'text_dir is {text_dir}')
     print(f'json_dir is {json_dir}')
 
-    for text_file in map(lambda text_filename: os.path.join(text_dir, text_filename), \
+    for text_file in map(lambda text_filename: os.path.join(text_dir, text_filename),
                          fnmatch.filter(os.listdir(text_dir), '*.txt')):
         print(text_file)
         json_data = {}
@@ -87,11 +87,12 @@ def converttext2json():
                     }
 
         # print(f'Number of customers is {numCustomers}')
-        customers = ['depart'] + [f'customer_{x}' for x in range(1, numCustomers + 1)]
+        customers = ['depart'] + \
+            [f'customer_{x}' for x in range(1, numCustomers + 1)]
         # print(customers)
 
         # Writing the distance_matrix
-        json_data['distance_matrix'] = [[calculate_distance(json_data[customer1], \
+        json_data['distance_matrix'] = [[calculate_distance(json_data[customer1],
                                                             json_data[customer2]) for customer1 in customers] for
                                         customer2 in customers]
 
@@ -105,7 +106,8 @@ def converttext2json():
 
         # Writing the json file to disk and saving it under json_customize directory
         with io.open(json_file, 'wt', newline='') as file_object:
-            dump(json_data, file_object, sort_keys=True, indent=4, separators=(',', ': '))
+            dump(json_data, file_object, sort_keys=True,
+                 indent=4, separators=(',', ': '))
 
 
 if __name__ == "__main__":

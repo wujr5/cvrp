@@ -5,12 +5,12 @@ import numpy as np
 import ast
 import json
 import glob
-from nsga_vrp.NSGA2_vrp import load_instance, routeToSubroute, eval_indvidual_fitness
+from NSGA2_vrp import load_instance, routeToSubroute, eval_indvidual_fitness
 
 
 def loadResultPaths():
     allpaths = glob.glob("./results/*.csv")
-    allpaths = [i.replace("\\","/") for i in allpaths]
+    allpaths = [i.replace("\\", "/") for i in allpaths]
     csv_files = [eachpath.split("/")[-1] for eachpath in allpaths]
     return allpaths, csv_files
 
@@ -26,7 +26,7 @@ def cleanResult(csv_file_path):
     gen_column = loaded_result['Generation']
 
     def clean_row(inp):
-        out = inp.replace("[","").replace("]","").strip().split(" ")
+        out = inp.replace("[", "").replace("]", "").strip().split(" ")
         return out
 
     min_dist = [float(clean_row(i)[-1]) for i in min_column]
@@ -48,13 +48,9 @@ def plotFitnessFromCSV(csv_file_path):
     # plt.show()
 
 
-
 def createAllFitnessPlots():
     allpaths, csv_files = loadResultPaths()
 
     # Plotting all
     for eachpath in allpaths:
         plotFitnessFromCSV(eachpath)
-
-
-

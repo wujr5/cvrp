@@ -2,7 +2,7 @@ import os
 import matplotlib.pyplot as plt
 import pandas as pd
 import numpy as np
-from nsga_vrp.NSGA2_vrp import load_instance, routeToSubroute, eval_indvidual_fitness
+from NSGA2_vrp import load_instance, routeToSubroute, eval_indvidual_fitness
 
 
 # Loading locations and customers to dataframe
