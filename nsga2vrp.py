@@ -93,6 +93,7 @@ class nsgaAlgo():
 
         return result
 
+    # 初始化适应值
     def generatingPopFitness(self):
         self.pop = self.toolbox.population(n=self.pop_size)
         self.invalid_ind = [ind for ind in self.pop if not ind.fitness.valid]
@@ -106,6 +107,7 @@ class nsgaAlgo():
         self.recordStat(self.invalid_ind, self.logbook,
                         self.pop, self.stats, gen=0)
 
+    # 运行入口
     def runGenerations(self):
         for gen in range(self.num_gen):
 
@@ -115,14 +117,26 @@ class nsgaAlgo():
                 ind) for ind in self.offspring]
 
             # 交配与变异操作
-            for ind1, ind2 in zip(self.offspring[::2], self.offspring[1::2]):
+            half = int(len(self.offspring) / 2)
+            for i in range(int(len(self.offspring) / 2)):
+                ind1 = self.offspring[i]
+                ind2 = self.offspring[i + half]
+
                 if random.random() <= self.cross_prob:
-                    self.toolbox.mate(ind1, ind2)
-                    # 删除适应值，用于后续重新更新
-                    del ind1.fitness.values, ind2.fitness.values
+                    new1, new2 = self.toolbox.mate(ind1, ind2)
+
+                    self.offspring[i] = new1
+                    self.offspring[i + half] = new2
+
                 # 变异操作
-                self.toolbox.mutate(ind1)
-                self.toolbox.mutate(ind2)
+                self.offspring[i] = self.toolbox.mutate(self.offspring[i])
+                self.offspring[i +
+                               half] = self.toolbox.mutate(self.offspring[i + half])
+
+                # 2-opt操作
+                self.offspring[i] = self.operate2opt(self.offspring[i])
+                self.offspring[i +
+                               half] = self.operate2opt(self.offspring[i + half])
 
             # 重新计算适应值
             self.invalid_ind = [
@@ -140,144 +154,92 @@ class nsgaAlgo():
             self.recordStat(self.invalid_ind, self.logbook,
                             self.pop, self.stats, gen + 1)
 
-    def getBestInd(self):
-        self.best_individual = tools.selBest(self.pop, 1)[0]
+    # 2-opt 算法
+    def operate2opt(self, ind):
+        subroute = self.routeToSubroute(ind)
 
-        # Printing the best after all generations
-        print(f"最好的粒子：{self.best_individual}")
-        print(f"车辆：{self.best_individual.fitness.values[0]}")
-        print(f"距离：{self.best_individual.fitness.values[1]}")
+        # 升序排列
+        def cmp(a, b):
+            return a['d'] - b['d']
 
-        # Printing the route from the best individual
-        self.printRoute(self.routeToSubroute(
-            self.best_individual, self.json_instance))
+        for i in range(len(subroute)):
+            r = subroute[i]
+            distance_arr = [{'c': customer, 'd': self.json_instance['distance_matrix'][customer][0]}
+                            for customer in r]
+            distance_arr.sort(key=cmp_to_key(cmp))
 
-    def doExport(self):
-        csv_file_name = f"{self.json_instance['instance_name']}_" \
-                        f"pop{self.pop_size}_crossProb{self.cross_prob}" \
-                        f"_mutProb{self.mut_prob}_numGen{self.num_gen}.csv"
-        self.exportCsv(csv_file_name, self.logbook)
+            first_c = distance_arr[0]['c']
+            first_arr = [{'c': customer, 'd': self.json_instance['distance_matrix'][customer][first_c]}
+                         for customer in r if customer != first_c]
+            first_arr.sort(key=cmp_to_key(cmp))
 
-    # 加载 json 文件
+            subroute[i] = [first_c] + [k['c'] for k in first_arr]
 
-    def load_instance(self, json_file):
+        return creator.Individual(list(self.subroute2Route(subroute)))
+
+    # 交配算法
+    def crossOverVrp(self, input_ind1, input_ind2):
+
+        ind1 = [x-1 for x in input_ind1]
+        ind2 = [x-1 for x in input_ind2]
+        size = min(len(ind1), len(ind2))
+        a, b = random.sample(range(size), 2)
+        if a > b:
+            a, b = b, a
+
+        holes1, holes2 = [True] * size, [True] * size
+        for i in range(size):
+            if i < a or i > b:
+                holes1[ind2[i]] = False
+                holes2[ind1[i]] = False
+
+        # We must keep the original values somewhere before scrambling everything
+        temp1, temp2 = ind1, ind2
+        k1, k2 = b + 1, b + 1
+        for i in range(size):
+            if not holes1[temp1[(i + b + 1) % size]]:
+                ind1[k1 % size] = temp1[(i + b + 1) % size]
+                k1 += 1
+
+            if not holes2[temp2[(i + b + 1) % size]]:
+                ind2[k2 % size] = temp2[(i + b + 1) % size]
+                k2 += 1
+
+        # Swap the content between a and b (included)
+        for i in range(a, b + 1):
+            ind1[i], ind2[i] = ind2[i], ind1[i]
+
+        # Finally adding 1 again to reclaim original input
+        ind1 = [x+1 for x in ind1]
+        ind2 = [x+1 for x in ind2]
+
+        return creator.Individual(list(ind1)), creator.Individual(list(ind2))
+
+    # 变异算法
+    def mutation(self, individual, indpb):
         """
-        Inputs: path to json file
-        Outputs: json file object if it exists, or else returns NoneType
+        Inputs : Individual route
+                Probability of mutation betwen (0,1)
+        Outputs : Mutated individual according to the probability
         """
-        if os.path.exists(path=json_file):
-            with io.open(json_file, 'rt', newline='') as file_object:
-                return load(file_object)
-        return None
+        size = len(individual)
+        for i in range(size):
+            if random.random() < indpb:
+                swap_indx = random.randint(0, size - 2)
+                if swap_indx >= i:
+                    swap_indx += 1
+                individual[i], individual[swap_indx] = individual[swap_indx], individual[i]
 
-    # 返回带子路径的二维数组
-    def routeToSubroute(self, individual, instance):
-        """
-        Inputs: Sequence of customers that a route has
-                Loaded instance problem
-        Outputs: Route that is divided in to subroutes
-                which is assigned to each vechicle.
-        """
-        route = []
-        sub_route = []
-        vehicle_load = 0
-        vehicle_capacity = instance['vehicle_capacity']
+        return creator.Individual(list(individual))
 
-        for customer_id in individual:
-            demand = instance[f"customer_{customer_id}"]["demand"]
-            updated_vehicle_load = vehicle_load + demand
-
-            if(updated_vehicle_load <= vehicle_capacity):
-                sub_route.append(customer_id)
-                vehicle_load = updated_vehicle_load
-            else:
-                route.append(sub_route)
-                sub_route = [customer_id]
-                vehicle_load = demand
-
-        if sub_route != []:
-            route.append(sub_route)
-
-        # Returning the final route with each list inside for a vehicle
-        return route
-
-    def printRoute(self, route, merge=False):
-        route_str = '0'
-        sub_route_count = 0
-        for sub_route in route:
-            sub_route_count += 1
-            sub_route_str = '0'
-            for customer_id in sub_route:
-                sub_route_str = f'{sub_route_str} - {customer_id}'
-                route_str = f'{route_str} - {customer_id}'
-            sub_route_str = f'{sub_route_str} - 0'
-            if not merge:
-                print(f'  Vehicle {sub_route_count}\'s route: {sub_route_str}')
-            route_str = f'{route_str} - 0'
-        if merge:
-            print(route_str)
-
-    # 计算个体的车辆数
-
-    def getVehicleNum(self, individual, instance):
-        """
-        Inputs: Individual route
-                Json file object loaded instance
-        Outputs: Number of vechiles according to the given problem and the route
-        """
-        # Get the route with subroutes divided according to demand
-        updated_route = self.routeToSubroute(individual, instance)
-        num_of_vehicles = len(updated_route)
-        return num_of_vehicles
-
-    # 计算个体的距离成本
-
-    def getRouteCost(self, individual, instance, unit_cost=1):
-        """
-        Inputs: 
-            - Individual route
-            - Problem instance, json file that is loaded
-            - Unit cost for the route (can be petrol etc)
-
-        Outputs:
-            - Total cost for the route taken by all the vehicles
-        """
-        total_cost = 0
-        updated_route = self.routeToSubroute(individual, instance)
-
-        for sub_route in updated_route:
-            # Initializing the subroute distance to 0
-            sub_route_distance = 0
-            # Initializing customer id for depot as 0
-            last_customer_id = 0
-
-            for customer_id in sub_route:
-                # Distance from the last customer id to next one in the given subroute
-                distance = instance["distance_matrix"][last_customer_id][customer_id]
-                sub_route_distance += distance
-                # Update last_customer_id to the new one
-                last_customer_id = customer_id
-
-            # After adding distances in subroute, adding the route cost from last customer to depot
-            # that is 0
-            sub_route_distance = sub_route_distance + \
-                instance["distance_matrix"][last_customer_id][0]
-
-            # Cost for this particular sub route
-            sub_route_transport_cost = unit_cost * sub_route_distance
-
-            # Adding this to total cost
-            total_cost = total_cost + sub_route_transport_cost
-
-        return total_cost
-
+    # 满意度函数
     def getSatisfaction(self, individual, instance):
         speed = 30  # 行驶速度
         left_edge = 100  # 可容忍早到时间
         right_edge = 100  # 可容忍迟到时间
 
         total_satisfaction = 0
-        updated_route = self.routeToSubroute(individual, instance)
+        updated_route = self.routeToSubroute(individual)
 
         for sub_route in updated_route:
             # 记录上一个顾客点 id，默认从配送点出发
@@ -326,6 +288,146 @@ class nsgaAlgo():
 
         return total_satisfaction / instance['Number_of_customers']
 
+    def getBestInd(self):
+        self.best_individual = tools.selBest(self.pop, 1)[0]
+
+        # Printing the best after all generations
+        print(f"最好：{self.best_individual}")
+        print(f"车辆：{self.best_individual.fitness.values[0]}")
+        print(f"距离：{self.best_individual.fitness.values[1]}")
+
+        # Printing the route from the best individual
+        self.printRoute(self.routeToSubroute(self.best_individual))
+
+    def doExport(self):
+        csv_file_name = f"{self.json_instance['instance_name']}_" \
+                        f"pop{self.pop_size}_crossProb{self.cross_prob}" \
+                        f"_mutProb{self.mut_prob}_numGen{self.num_gen}.csv"
+        self.exportCsv(csv_file_name, self.logbook)
+
+    # 加载 json 文件
+
+    def load_instance(self, json_file):
+        """
+        Inputs: path to json file
+        Outputs: json file object if it exists, or else returns NoneType
+        """
+        if os.path.exists(path=json_file):
+            with io.open(json_file, 'rt', newline='') as file_object:
+                return load(file_object)
+        return None
+
+    # 将二维数组的子路径转化为一维数组
+    def subroute2Route(self, subroute):
+        ind = []
+
+        for r in subroute:
+            ind += r
+
+        return ind
+
+    # 返回带子路径的二维数组
+    def routeToSubroute(self, individual):
+        """
+        Inputs: Sequence of customers that a route has
+                Loaded instance problem
+        Outputs: Route that is divided in to subroutes
+                which is assigned to each vechicle.
+        """
+        instance = self.json_instance
+        route = []
+        sub_route = []
+        vehicle_load = 0
+        vehicle_capacity = instance['vehicle_capacity']
+
+        for customer_id in individual:
+            demand = instance[f"customer_{customer_id}"]["demand"]
+            updated_vehicle_load = vehicle_load + demand
+
+            if(updated_vehicle_load <= vehicle_capacity):
+                sub_route.append(customer_id)
+                vehicle_load = updated_vehicle_load
+            else:
+                route.append(sub_route)
+                sub_route = [customer_id]
+                vehicle_load = demand
+
+        if sub_route != []:
+            route.append(sub_route)
+
+        # Returning the final route with each list inside for a vehicle
+        return route
+
+    def printRoute(self, route, merge=False):
+        route_str = '0'
+        sub_route_count = 0
+        for sub_route in route:
+            sub_route_count += 1
+            sub_route_str = '0'
+            for customer_id in sub_route:
+                sub_route_str = f'{sub_route_str} - {customer_id}'
+                route_str = f'{route_str} - {customer_id}'
+            sub_route_str = f'{sub_route_str} - 0'
+            if not merge:
+                print(f'  Vehicle {sub_route_count}\'s route: {sub_route_str}')
+            route_str = f'{route_str} - 0'
+        if merge:
+            print(route_str)
+
+    # 计算个体的车辆数
+
+    def getVehicleNum(self, individual, instance):
+        """
+        Inputs: Individual route
+                Json file object loaded instance
+        Outputs: Number of vechiles according to the given problem and the route
+        """
+        # Get the route with subroutes divided according to demand
+        updated_route = self.routeToSubroute(individual)
+        num_of_vehicles = len(updated_route)
+        return num_of_vehicles
+
+    # 计算个体的距离成本
+
+    def getRouteCost(self, individual, instance, unit_cost=1):
+        """
+        Inputs: 
+            - Individual route
+            - Problem instance, json file that is loaded
+            - Unit cost for the route (can be petrol etc)
+
+        Outputs:
+            - Total cost for the route taken by all the vehicles
+        """
+        total_cost = 0
+        updated_route = self.routeToSubroute(individual)
+
+        for sub_route in updated_route:
+            # Initializing the subroute distance to 0
+            sub_route_distance = 0
+            # Initializing customer id for depot as 0
+            last_customer_id = 0
+
+            for customer_id in sub_route:
+                # Distance from the last customer id to next one in the given subroute
+                distance = instance["distance_matrix"][last_customer_id][customer_id]
+                sub_route_distance += distance
+                # Update last_customer_id to the new one
+                last_customer_id = customer_id
+
+            # After adding distances in subroute, adding the route cost from last customer to depot
+            # that is 0
+            sub_route_distance = sub_route_distance + \
+                instance["distance_matrix"][last_customer_id][0]
+
+            # Cost for this particular sub route
+            sub_route_transport_cost = unit_cost * sub_route_distance
+
+            # Adding this to total cost
+            total_cost = total_cost + sub_route_transport_cost
+
+        return total_cost
+
     # Get the fitness of a given route
 
     def eval_indvidual_fitness(self, individual, instance, unit_cost):
@@ -347,60 +449,6 @@ class nsgaAlgo():
 
         # return (1 / satisfaction * 100, vehicles + route_cost)
         return (vehicles, route_cost)
-
-    def crossOverVrp(self, input_ind1, input_ind2):
-
-        ind1 = [x-1 for x in input_ind1]
-        ind2 = [x-1 for x in input_ind2]
-        size = min(len(ind1), len(ind2))
-        a, b = random.sample(range(size), 2)
-        if a > b:
-            a, b = b, a
-
-        holes1, holes2 = [True] * size, [True] * size
-        for i in range(size):
-            if i < a or i > b:
-                holes1[ind2[i]] = False
-                holes2[ind1[i]] = False
-
-        # We must keep the original values somewhere before scrambling everything
-        temp1, temp2 = ind1, ind2
-        k1, k2 = b + 1, b + 1
-        for i in range(size):
-            if not holes1[temp1[(i + b + 1) % size]]:
-                ind1[k1 % size] = temp1[(i + b + 1) % size]
-                k1 += 1
-
-            if not holes2[temp2[(i + b + 1) % size]]:
-                ind2[k2 % size] = temp2[(i + b + 1) % size]
-                k2 += 1
-
-        # Swap the content between a and b (included)
-        for i in range(a, b + 1):
-            ind1[i], ind2[i] = ind2[i], ind1[i]
-
-        # Finally adding 1 again to reclaim original input
-        ind1 = [x+1 for x in ind1]
-        ind2 = [x+1 for x in ind2]
-
-        return ind1, ind2
-
-    def mutation(self, individual, indpb):
-        """
-        Inputs : Individual route
-                Probability of mutation betwen (0,1)
-        Outputs : Mutated individual according to the probability
-        """
-        size = len(individual)
-        for i in range(size):
-            if random.random() < indpb:
-                swap_indx = random.randint(0, size - 2)
-                if swap_indx >= i:
-                    swap_indx += 1
-                individual[i], individual[swap_indx] = \
-                    individual[swap_indx], individual[i]
-
-        return individual,
 
     ## Statistics and Logging
 
