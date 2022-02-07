@@ -119,17 +119,20 @@ class nsgaAlgo():
                 ind2 = self.parents[i * 2 + 1]
 
                 # 交配
-                # new1, new2 = self.toolbox.mate(ind1, ind2)
-
-                # 变异
-                new1 = self.toolbox.mutate(ind1)
-                new2 = self.toolbox.mutate(ind2)
-
+                new1, new2 = self.toolbox.mate(ind1, ind2)
                 self.offsprings += [new1, new2]
 
-            # 重新计算适应值
-            for ind in self.offsprings:
-                ind.fitness.values = self.toolbox.evaluate(ind)
+                # 变异
+                new3 = self.toolbox.mutate(new1)
+                new4 = self.toolbox.mutate(new2)
+                self.offsprings += [new3, new4]
+
+            # 2-opt操作
+            for i in range(len(self.offsprings)):
+                self.offsprings[i] = self.operate2opt(self.offsprings[i])
+                # 重新计算适应值
+                self.offsprings[i].fitness.values = self.toolbox.evaluate(
+                    self.offsprings[i])
 
             # 使用 nsga2 算法，重新选择种群
             self.pop = self.toolbox.select(
@@ -142,14 +145,6 @@ class nsgaAlgo():
             else:
                 best_fitness = best_individual.fitness.values[1]
                 best_fitness_count = 0
-
-            # 2-opt操作
-            # if best_fitness_count > 10:
-            #     for i in range(len(self.pop)):
-            #         self.pop[i] = self.operate2opt(self.pop[i])
-            #         self.pop[i].fitness.values = self.toolbox.evaluate(
-            #             self.pop[i])
-            #     best_fitness_count = 0
 
             print(
                 f'迭代：{gen + 1}，车辆：{best_individual.fitness.values[0]}，距离：{best_individual.fitness.values[1]}，相同次数：{best_fitness_count}')
@@ -189,40 +184,29 @@ class nsgaAlgo():
     # 交配算法
     def crossOverVrp(self, input_ind1, input_ind2):
 
-        ind1 = [x-1 for x in input_ind1]
-        ind2 = [x-1 for x in input_ind2]
-        size = min(len(ind1), len(ind2))
-        a, b = random.sample(range(size), 2)
+        # cross over 方式交配
+        def cross(item1, item2, a, b):
+            newitem = [0 for i in item1]
+
+            for i in range(a, b + 1):
+                newitem[i] = item1[i]
+                item2.remove(item1[i])
+
+            for i in item2:
+                newitem[newitem.index(0)] = i
+
+            return newitem
+
+        # 选取两个切片位置，并保证 a < b
+        a, b = random.sample(range(self.ind_size), 2)
         if a > b:
             a, b = b, a
 
-        holes1, holes2 = [True] * size, [True] * size
-        for i in range(size):
-            if i < a or i > b:
-                holes1[ind2[i]] = False
-                holes2[ind1[i]] = False
+        # 存放子代
+        new1 = cross(deepcopy(input_ind1), deepcopy(input_ind2), a, b)
+        new2 = cross(deepcopy(input_ind2), deepcopy(input_ind1), a, b)
 
-        # We must keep the original values somewhere before scrambling everything
-        temp1, temp2 = ind1, ind2
-        k1, k2 = b + 1, b + 1
-        for i in range(size):
-            if not holes1[temp1[(i + b + 1) % size]]:
-                ind1[k1 % size] = temp1[(i + b + 1) % size]
-                k1 += 1
-
-            if not holes2[temp2[(i + b + 1) % size]]:
-                ind2[k2 % size] = temp2[(i + b + 1) % size]
-                k2 += 1
-
-        # Swap the content between a and b (included)
-        for i in range(a, b + 1):
-            ind1[i], ind2[i] = ind2[i], ind1[i]
-
-        # Finally adding 1 again to reclaim original input
-        ind1 = [x+1 for x in ind1]
-        ind2 = [x+1 for x in ind2]
-
-        return creator.Individual(list(ind1)), creator.Individual(list(ind2))
+        return creator.Individual(list(new1)), creator.Individual(list(new2))
 
     # 变异算法
     def mutation(self, individual):

@@ -8,9 +8,9 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--instance_name', type=str, default="./data/json/C101.json", required=False,
                         help="Enter the input Json file name")
-    parser.add_argument('--popSize', type=int, default=200, required=False,
+    parser.add_argument('--popSize', type=int, default=180, required=False,
                         help="Enter the population size")
-    parser.add_argument('--mutProb', type=float, default=0.02, required=False,
+    parser.add_argument('--mutProb', type=float, default=0.021, required=False,
                         help="Mutation Probabilty")
     parser.add_argument('--numGen', type=int, default=1000, required=False,
                         help="Number of generations to run")
