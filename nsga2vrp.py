@@ -119,13 +119,13 @@ class nsgaAlgo():
                 ind2 = self.parents[i * 2 + 1]
 
                 # 交配
-                new1, new2 = self.toolbox.mate(ind1, ind2)
+                # new1, new2 = self.toolbox.mate(ind1, ind2)
 
                 # 变异
-                new3 = self.toolbox.mutate(new1)
-                new4 = self.toolbox.mutate(new2)
+                new1 = self.toolbox.mutate(ind1)
+                new2 = self.toolbox.mutate(ind2)
 
-                self.offsprings += [new1, new2, new3, new4]
+                self.offsprings += [new1, new2]
 
             # 重新计算适应值
             for ind in self.offsprings:
