@@ -14,15 +14,14 @@ BASE_DIR = os.path.abspath(os.path.dirname(__file__))
 
 class nsgaAlgo():
 
-    def __init__(self):
+    def __init__(self, popSize, mutProb, numGen):
         self.json_instance = self.load_instance('./data/json/C101.json')
         self.ind_size = self.json_instance['Number_of_customers']
-        self.pop_size = 400
-        self.cross_prob = 0.85
-        self.mut_prob = 0.02
-        self.num_gen = 150
+        self.pop_size = popSize
+        self.mut_prob = mutProb
+        self.num_gen = numGen
         self.toolbox = base.Toolbox()
-        self.logbook, self.stats = self.createStatsObjs()
+        # self.logbook, self.stats = self.createStatsObjs()
         self.createCreators()
 
     # 设置 deap 库需要使用的各个函数
@@ -49,8 +48,7 @@ class nsgaAlgo():
                               list, self.toolbox.individual)
 
         # 设置适应值计算函数
-        self.toolbox.register('evaluate', self.eval_indvidual_fitness,
-                              instance=self.json_instance, unit_cost=1)
+        self.toolbox.register('evaluate', self.evaluate, unit_cost=1)
 
         # 设置选择算法
         self.toolbox.register("select", tools.selNSGA2)
@@ -59,8 +57,7 @@ class nsgaAlgo():
         self.toolbox.register("mate", self.crossOverVrp)
 
         # 设置变异算法
-        self.toolbox.register(
-            "mutate", self.mutation, indpb=self.mut_prob)
+        self.toolbox.register("mutate", self.mutation)
 
     # 定制的种群初始化方式
     def initPopulation(self, customers, size):
@@ -96,86 +93,98 @@ class nsgaAlgo():
     # 初始化适应值
     def generatingPopFitness(self):
         self.pop = self.toolbox.population(n=self.pop_size)
-        self.invalid_ind = [ind for ind in self.pop if not ind.fitness.valid]
-        self.fitnesses = list(map(self.toolbox.evaluate, self.invalid_ind))
 
-        for ind, fit in zip(self.invalid_ind, self.fitnesses):
-            ind.fitness.values = fit
+        for ind in self.pop:
+            ind.fitness.values = self.toolbox.evaluate(ind)
 
-        self.pop = self.toolbox.select(self.pop, len(self.pop))
-
-        self.recordStat(self.invalid_ind, self.logbook,
-                        self.pop, self.stats, gen=0)
+        # self.recordStat(self.invalid_ind, self.logbook,
+        #                 self.pop, self.stats, gen=0)
 
     # 运行入口
     def runGenerations(self):
+        best_fitness = 0
+        best_fitness_count = 0
+
         for gen in range(self.num_gen):
 
             # 选择用于交配的后代
-            self.offspring = tools.selTournamentDCD(self.pop, len(self.pop))
-            self.offspring = [self.toolbox.clone(
-                ind) for ind in self.offspring]
+            self.parents = tools.selTournament(
+                self.pop, int(len(self.pop) / 2), int(len(self.pop) / 2))
+
+            self.offsprings = []
 
             # 交配与变异操作
-            half = int(len(self.offspring) / 2)
-            for i in range(int(len(self.offspring) / 2)):
-                ind1 = self.offspring[i]
-                ind2 = self.offspring[i + half]
+            for i in range(int(len(self.parents) / 2)):
+                ind1 = self.parents[i]
+                ind2 = self.parents[i * 2 + 1]
 
-                if random.random() <= self.cross_prob:
-                    new1, new2 = self.toolbox.mate(ind1, ind2)
+                # 交配
+                new1, new2 = self.toolbox.mate(ind1, ind2)
 
-                    self.offspring[i] = new1
-                    self.offspring[i + half] = new2
+                # 变异
+                new3 = self.toolbox.mutate(new1)
+                new4 = self.toolbox.mutate(new2)
 
-                # 变异操作
-                self.offspring[i] = self.toolbox.mutate(self.offspring[i])
-                self.offspring[i +
-                               half] = self.toolbox.mutate(self.offspring[i + half])
-
-                # 2-opt操作
-                self.offspring[i] = self.operate2opt(self.offspring[i])
-                self.offspring[i +
-                               half] = self.operate2opt(self.offspring[i + half])
+                self.offsprings += [new1, new2, new3, new4]
 
             # 重新计算适应值
-            self.invalid_ind = [
-                ind for ind in self.offspring if not ind.fitness.valid]
-            self.fitnesses = self.toolbox.map(
-                self.toolbox.evaluate, self.invalid_ind)
-            for ind, fit in zip(self.invalid_ind, self.fitnesses):
-                ind.fitness.values = fit
+            for ind in self.offsprings:
+                ind.fitness.values = self.toolbox.evaluate(ind)
 
             # 使用 nsga2 算法，重新选择种群
             self.pop = self.toolbox.select(
-                self.pop + self.offspring, self.pop_size)
+                self.pop + self.offsprings, self.pop_size)
+
+            best_individual = tools.selBest(self.pop, 1)[0]
+
+            if best_fitness == best_individual.fitness.values[1]:
+                best_fitness_count += 1
+            else:
+                best_fitness = best_individual.fitness.values[1]
+                best_fitness_count = 0
+
+            # 2-opt操作
+            # if best_fitness_count > 10:
+            #     for i in range(len(self.pop)):
+            #         self.pop[i] = self.operate2opt(self.pop[i])
+            #         self.pop[i].fitness.values = self.toolbox.evaluate(
+            #             self.pop[i])
+            #     best_fitness_count = 0
+
+            print(
+                f'迭代：{gen + 1}，车辆：{best_individual.fitness.values[0]}，距离：{best_individual.fitness.values[1]}，相同次数：{best_fitness_count}')
 
             # 生成日志
-            self.recordStat(self.invalid_ind, self.logbook,
-                            self.pop, self.stats, gen + 1)
+            # self.recordStat(self.offsprings, self.logbook,
+            #                 self.pop, self.stats, gen + 1)
 
     # 2-opt 算法
     def operate2opt(self, ind):
         subroute = self.routeToSubroute(ind)
+        result = []
 
         # 升序排列
         def cmp(a, b):
             return a['d'] - b['d']
 
         for i in range(len(subroute)):
-            r = subroute[i]
             distance_arr = [{'c': customer, 'd': self.json_instance['distance_matrix'][customer][0]}
-                            for customer in r]
+                            for customer in subroute[i]]
             distance_arr.sort(key=cmp_to_key(cmp))
 
-            first_c = distance_arr[0]['c']
-            first_arr = [{'c': customer, 'd': self.json_instance['distance_matrix'][customer][first_c]}
-                         for customer in r if customer != first_c]
-            first_arr.sort(key=cmp_to_key(cmp))
+            # 距离配送中心最近的
+            result.append(distance_arr[0]['c'])
+            subroute[i].remove(result[-1])
 
-            subroute[i] = [first_c] + [k['c'] for k in first_arr]
+            while len(subroute[i]) > 0:
+                distance_arr = [{'c': k, 'd': self.json_instance['distance_matrix'][result[-1]][k]}
+                                for k in subroute[i]]
+                distance_arr.sort(key=cmp_to_key(cmp))
 
-        return creator.Individual(list(self.subroute2Route(subroute)))
+                result.append(distance_arr[0]['c'])
+                subroute[i].remove(result[-1])
+
+        return creator.Individual(list(result))
 
     # 交配算法
     def crossOverVrp(self, input_ind1, input_ind2):
@@ -216,24 +225,21 @@ class nsgaAlgo():
         return creator.Individual(list(ind1)), creator.Individual(list(ind2))
 
     # 变异算法
-    def mutation(self, individual, indpb):
-        """
-        Inputs : Individual route
-                Probability of mutation betwen (0,1)
-        Outputs : Mutated individual according to the probability
-        """
+    def mutation(self, individual):
         size = len(individual)
+        ind = deepcopy(individual)
+
         for i in range(size):
-            if random.random() < indpb:
+            if random.random() < self.mut_prob:
                 swap_indx = random.randint(0, size - 2)
                 if swap_indx >= i:
                     swap_indx += 1
-                individual[i], individual[swap_indx] = individual[swap_indx], individual[i]
+                ind[i], ind[swap_indx] = ind[swap_indx], ind[i]
 
-        return creator.Individual(list(individual))
+        return creator.Individual(list(ind))
 
     # 满意度函数
-    def getSatisfaction(self, individual, instance):
+    def getSatisfaction(self, individual):
         speed = 30  # 行驶速度
         left_edge = 100  # 可容忍早到时间
         right_edge = 100  # 可容忍迟到时间
@@ -251,9 +257,9 @@ class nsgaAlgo():
 
             for customer_id in sub_route:
                 # 顾客点
-                customer = instance["customer_" + str(customer_id)]
+                customer = self.json_instance["customer_" + str(customer_id)]
                 # 行驶距离
-                distance = instance["distance_matrix"][last_customer_id][customer_id]
+                distance = self.json_instance["distance_matrix"][last_customer_id][customer_id]
                 # 耗时
                 sub_time_cost = sub_time_cost + distance / speed
 
@@ -286,7 +292,7 @@ class nsgaAlgo():
             # Adding this to total cost
             total_satisfaction = total_satisfaction + sub_satisfaction
 
-        return total_satisfaction / instance['Number_of_customers']
+        return total_satisfaction / self.json_instance['Number_of_customers']
 
     def getBestInd(self):
         self.best_individual = tools.selBest(self.pop, 1)[0]
@@ -301,7 +307,7 @@ class nsgaAlgo():
 
     def doExport(self):
         csv_file_name = f"{self.json_instance['instance_name']}_" \
-                        f"pop{self.pop_size}_crossProb{self.cross_prob}" \
+                        f"pop{self.pop_size}" \
                         f"_mutProb{self.mut_prob}_numGen{self.num_gen}.csv"
         self.exportCsv(csv_file_name, self.logbook)
 
@@ -376,7 +382,7 @@ class nsgaAlgo():
 
     # 计算个体的车辆数
 
-    def getVehicleNum(self, individual, instance):
+    def getVehicleNum(self, individual):
         """
         Inputs: Individual route
                 Json file object loaded instance
@@ -389,16 +395,7 @@ class nsgaAlgo():
 
     # 计算个体的距离成本
 
-    def getRouteCost(self, individual, instance, unit_cost=1):
-        """
-        Inputs: 
-            - Individual route
-            - Problem instance, json file that is loaded
-            - Unit cost for the route (can be petrol etc)
-
-        Outputs:
-            - Total cost for the route taken by all the vehicles
-        """
+    def getRouteCost(self, individual, unit_cost=1):
         total_cost = 0
         updated_route = self.routeToSubroute(individual)
 
@@ -410,7 +407,7 @@ class nsgaAlgo():
 
             for customer_id in sub_route:
                 # Distance from the last customer id to next one in the given subroute
-                distance = instance["distance_matrix"][last_customer_id][customer_id]
+                distance = self.json_instance["distance_matrix"][last_customer_id][customer_id]
                 sub_route_distance += distance
                 # Update last_customer_id to the new one
                 last_customer_id = customer_id
@@ -418,7 +415,7 @@ class nsgaAlgo():
             # After adding distances in subroute, adding the route cost from last customer to depot
             # that is 0
             sub_route_distance = sub_route_distance + \
-                instance["distance_matrix"][last_customer_id][0]
+                self.json_instance["distance_matrix"][last_customer_id][0]
 
             # Cost for this particular sub route
             sub_route_transport_cost = unit_cost * sub_route_distance
@@ -430,22 +427,16 @@ class nsgaAlgo():
 
     # Get the fitness of a given route
 
-    def eval_indvidual_fitness(self, individual, instance, unit_cost):
-        """
-        Inputs: individual route as a sequence
-                Json object that is loaded as file object
-                unit_cost for the distance 
-        Outputs: Returns a tuple of (Number of vechicles, Route cost from all the vechicles)
-        """
+    def evaluate(self, individual, unit_cost=1):
 
         # 用车成本
-        vehicles = self.getVehicleNum(individual, instance)
+        vehicles = self.getVehicleNum(individual)
 
         # 路程成本
-        route_cost = self.getRouteCost(individual, instance, unit_cost)
+        route_cost = self.getRouteCost(individual, unit_cost)
 
         # 获取满意度
-        satisfaction = self.getSatisfaction(individual, instance)
+        # satisfaction = self.getSatisfaction(individual)
 
         # return (1 / satisfaction * 100, vehicles + route_cost)
         return (vehicles, route_cost)
@@ -503,4 +494,4 @@ class nsgaAlgo():
         self.generatingPopFitness()
         self.runGenerations()
         self.getBestInd()
-        self.doExport()
+        # self.doExport()
