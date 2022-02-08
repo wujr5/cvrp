@@ -5,7 +5,7 @@ import random
 import numpy
 import csv
 from functools import cmp_to_key
-
+import datetime
 from json import load
 from deap import base, creator, tools
 
@@ -15,7 +15,8 @@ BASE_DIR = os.path.abspath(os.path.dirname(__file__))
 class nsgaAlgo():
 
     def __init__(self, popSize, mutProb, numGen):
-        self.json_instance = self.load_instance('./data/json/C101.json')
+        self.json_instance = self.load_instance('./data/json/RC104.json')
+        self.speed = self.load_speed('./data/speed.csv')
         self.ind_size = self.json_instance['Number_of_customers']
         self.pop_size = popSize
         self.mut_prob = mutProb
@@ -23,6 +24,41 @@ class nsgaAlgo():
         self.toolbox = base.Toolbox()
         # self.logbook, self.stats = self.createStatsObjs()
         self.createCreators()
+
+    # 加载 json 文件
+    def load_instance(self, json_file):
+        if os.path.exists(path=json_file):
+            with io.open(json_file, 'rt', newline='') as file_object:
+                return load(file_object)
+        return None
+
+    # 读取速度文件
+    def load_speed(self, csv_file):
+        if os.path.exists(path=csv_file):
+            with io.open(csv_file, 'rt', newline='') as f:
+                f_csv = list(csv.reader(f))
+                speed = {}
+                for i in range(1, len(f_csv)):
+                    timestr = f_csv[i][0]
+                    speedstr = float(f_csv[i][1].replace(' ', ''))
+
+                    timestrGap = timestr.split('-')
+
+                    # 记录最早的时间点
+                    if i == 1:
+                        speed[0] = timestrGap[0].split(':')
+
+                    end = timestrGap[1].split(':')
+
+                    # 计算跟最早时间点的时间段
+                    timegap = datetime.timedelta(
+                        hours=int(end[0]), minutes=int(end[1])) - (datetime.timedelta(
+                            hours=int(speed[0][0]), minutes=int(speed[0][1])))
+
+                    speed[timegap.total_seconds() / 60] = speedstr
+
+                return speed
+        return None
 
     # 设置 deap 库需要使用的各个函数
     def createCreators(self):
@@ -291,23 +327,12 @@ class nsgaAlgo():
 
     def doExport(self):
         csv_file_name = f"{self.json_instance['instance_name']}_" \
-                        f"pop{self.pop_size}" \
-                        f"_mutProb{self.mut_prob}_numGen{self.num_gen}.csv"
+            f"pop{self.pop_size}" \
+            f"_mutProb{self.mut_prob}_numGen{self.num_gen}.csv"
         self.exportCsv(csv_file_name, self.logbook)
 
-    # 加载 json 文件
-
-    def load_instance(self, json_file):
-        """
-        Inputs: path to json file
-        Outputs: json file object if it exists, or else returns NoneType
-        """
-        if os.path.exists(path=json_file):
-            with io.open(json_file, 'rt', newline='') as file_object:
-                return load(file_object)
-        return None
-
     # 将二维数组的子路径转化为一维数组
+
     def subroute2Route(self, subroute):
         ind = []
 
@@ -425,7 +450,7 @@ class nsgaAlgo():
         # return (1 / satisfaction * 100, vehicles + route_cost)
         return (vehicles, route_cost)
 
-    ## Statistics and Logging
+    # Statistics and Logging
 
     def createStatsObjs(self):
         # Method to create stats and logbook objects
