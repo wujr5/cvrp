@@ -219,6 +219,9 @@ class nsgaAlgo():
 
     # 交配算法
     def crossOverVrp(self, input_ind1, input_ind2):
+        # 升序排列
+        def cmp(a, b):
+            return a[1] - b[1]
 
         # cross over 方式交配
         def cross(item1, item2, a, b):
@@ -265,9 +268,9 @@ class nsgaAlgo():
         right_edge = 100  # 可容忍迟到时间
 
         total_satisfaction = 0
-        updated_route = self.routeToSubroute(individual)
+        all_sub_route = self.routeToSubroute(individual)
 
-        for sub_route in updated_route:
+        for sub_route in all_sub_route:
             # 记录上一个顾客点 id，默认从配送点出发
             last_customer_id = 0
             # 当前路线的总满意度
@@ -314,41 +317,8 @@ class nsgaAlgo():
 
         return total_satisfaction / self.json_instance['Number_of_customers']
 
-    def getBestInd(self):
-        self.best_individual = tools.selBest(self.pop, 1)[0]
-
-        # Printing the best after all generations
-        print(f"最好：{self.best_individual}")
-        print(f"车辆：{self.best_individual.fitness.values[0]}")
-        print(f"距离：{self.best_individual.fitness.values[1]}")
-
-        # Printing the route from the best individual
-        self.printRoute(self.routeToSubroute(self.best_individual))
-
-    def doExport(self):
-        csv_file_name = f"{self.json_instance['instance_name']}_" \
-            f"pop{self.pop_size}" \
-            f"_mutProb{self.mut_prob}_numGen{self.num_gen}.csv"
-        self.exportCsv(csv_file_name, self.logbook)
-
-    # 将二维数组的子路径转化为一维数组
-
-    def subroute2Route(self, subroute):
-        ind = []
-
-        for r in subroute:
-            ind += r
-
-        return ind
-
     # 返回带子路径的二维数组
     def routeToSubroute(self, individual):
-        """
-        Inputs: Sequence of customers that a route has
-                Loaded instance problem
-        Outputs: Route that is divided in to subroutes
-                which is assigned to each vechicle.
-        """
         instance = self.json_instance
         route = []
         sub_route = []
@@ -370,7 +340,6 @@ class nsgaAlgo():
         if sub_route != []:
             route.append(sub_route)
 
-        # Returning the final route with each list inside for a vehicle
         return route
 
     def printRoute(self, route, merge=False):
@@ -392,63 +361,82 @@ class nsgaAlgo():
     # 计算个体的车辆数
 
     def getVehicleNum(self, individual):
-        """
-        Inputs: Individual route
-                Json file object loaded instance
-        Outputs: Number of vechiles according to the given problem and the route
-        """
-        # Get the route with subroutes divided according to demand
-        updated_route = self.routeToSubroute(individual)
-        num_of_vehicles = len(updated_route)
+        all_sub_route = self.routeToSubroute(individual)
+        num_of_vehicles = len(all_sub_route)
         return num_of_vehicles
 
     # 计算个体的距离成本
 
     def getRouteCost(self, individual, unit_cost=1):
+        # 总成本
         total_cost = 0
-        updated_route = self.routeToSubroute(individual)
 
-        for sub_route in updated_route:
-            # Initializing the subroute distance to 0
+        all_sub_route = self.routeToSubroute(individual)
+
+        for sub_route in all_sub_route:
             sub_route_distance = 0
-            # Initializing customer id for depot as 0
+            # 从配送点出发
             last_customer_id = 0
 
             for customer_id in sub_route:
-                # Distance from the last customer id to next one in the given subroute
                 distance = self.json_instance["distance_matrix"][last_customer_id][customer_id]
                 sub_route_distance += distance
-                # Update last_customer_id to the new one
                 last_customer_id = customer_id
 
-            # After adding distances in subroute, adding the route cost from last customer to depot
-            # that is 0
+            # 回到配送点
             sub_route_distance = sub_route_distance + \
                 self.json_instance["distance_matrix"][last_customer_id][0]
 
-            # Cost for this particular sub route
+            # 乘以单位成本
             sub_route_transport_cost = unit_cost * sub_route_distance
 
-            # Adding this to total cost
             total_cost = total_cost + sub_route_transport_cost
 
         return total_cost
 
-    # Get the fitness of a given route
+    # 计算个体的每个路径的距离成本
 
+    def getSubRouteCost(self, individual, unit_cost=1):
+        # 单条路径和成本
+        route_cost = []
+
+        all_sub_route = self.routeToSubroute(individual)
+
+        for sub_route in all_sub_route:
+            sub_route_distance = 0
+            # 从配送点出发
+            last_customer_id = 0
+
+            for customer_id in sub_route:
+                distance = self.json_instance["distance_matrix"][last_customer_id][customer_id]
+                sub_route_distance += distance
+                last_customer_id = customer_id
+
+            # 回到配送点
+            sub_route_distance = sub_route_distance + \
+                self.json_instance["distance_matrix"][last_customer_id][0]
+
+            # 乘以单位成本
+            sub_route_transport_cost = unit_cost * sub_route_distance
+
+            route_cost.append((sub_route, sub_route_transport_cost))
+
+        return route_cost
+
+    # 计算适应值
     def evaluate(self, individual, unit_cost=1):
 
         # 用车成本
         vehicles = self.getVehicleNum(individual)
 
         # 路程成本
-        route_cost = self.getRouteCost(individual, unit_cost)
+        total_cost = self.getRouteCost(individual, unit_cost)
 
         # 获取满意度
         # satisfaction = self.getSatisfaction(individual)
 
         # return (1 / satisfaction * 100, vehicles + route_cost)
-        return (vehicles, route_cost)
+        return (vehicles, total_cost)
 
     # Statistics and Logging
 
@@ -485,7 +473,22 @@ class nsgaAlgo():
         print(
             f'迭代：{gen}，车辆：{best_individual.fitness.values[0]}，距离：{best_individual.fitness.values[1]}')
 
-    # Exporting CSV files
+    def getBestInd(self):
+        self.best_individual = tools.selBest(self.pop, 1)[0]
+
+        # Printing the best after all generations
+        print(f"最好：{self.best_individual}")
+        print(f"车辆：{self.best_individual.fitness.values[0]}")
+        print(f"距离：{self.best_individual.fitness.values[1]}")
+
+        # Printing the route from the best individual
+        self.printRoute(self.routeToSubroute(self.best_individual))
+
+    def doExport(self):
+        csv_file_name = f"{self.json_instance['instance_name']}_" \
+            f"pop{self.pop_size}" \
+            f"_mutProb{self.mut_prob}_numGen{self.num_gen}.csv"
+        self.exportCsv(csv_file_name, self.logbook)
 
     def exportCsv(self, csv_file_name, logbook):
         csv_columns = logbook[0].keys()
