@@ -22,6 +22,10 @@ class nsgaAlgo():
         self.mut_prob = mutProb
         self.num_gen = numGen
         self.toolbox = base.Toolbox()
+
+        self.A = 0.7  # 顾客时间窗左端（即 ready time）=0
+        self.B = 1 - self.A  # 其余则为B类，A + B = 1
+
         # self.logbook, self.stats = self.createStatsObjs()
         self.createCreators()
 
@@ -267,55 +271,60 @@ class nsgaAlgo():
         left_edge = 100  # 可容忍早到时间
         right_edge = 100  # 可容忍迟到时间
 
-        total_satisfaction = 0
         all_sub_route = self.routeToSubroute(individual)
+        A_Customer = []
+        B_Customer = []
 
         for sub_route in all_sub_route:
-            # 记录上一个顾客点 id，默认从配送点出发
             last_customer_id = 0
-            # 当前路线的总满意度
-            sub_satisfaction = 0
-            # 当前路线的耗时
             sub_time_cost = 0
 
             for customer_id in sub_route:
-                # 顾客点
+                customer_satisfaction = 0
                 customer = self.json_instance["customer_" + str(customer_id)]
-                # 行驶距离
                 distance = self.json_instance["distance_matrix"][last_customer_id][customer_id]
-                # 耗时
                 sub_time_cost = sub_time_cost + distance / speed
 
                 # 早到 left_edge 分钟内
                 if sub_time_cost >= (customer['ready_time'] - left_edge) and sub_time_cost < customer['ready_time']:
-                    sub_satisfaction += 100 * \
+                    customer_satisfaction += 100 * \
                         (1 - (customer['ready_time'] -
                          sub_time_cost) / left_edge)
                 # 早到
                 elif sub_time_cost < customer['ready_time']:
-                    sub_satisfaction += 0
+                    customer_satisfaction += 0
                 # 刚好
                 elif sub_time_cost >= customer['ready_time'] and sub_time_cost <= customer['due_time']:
-                    sub_satisfaction += 100
+                    customer_satisfaction += 100
                 # 迟到 right_edge 分钟内
                 elif sub_time_cost > customer['due_time'] and sub_time_cost <= (customer['due_time'] + right_edge):
-                    sub_satisfaction += 100 * \
+                    customer_satisfaction += 100 * \
                         (1 - (sub_time_cost -
                          customer['due_time']) / right_edge)
                 # 迟到
                 elif sub_time_cost > customer['due_time']:
-                    sub_satisfaction += 0
+                    customer_satisfaction += 0
 
                 # 加上服务时间
-                sub_time_cost += customer['service_time']
+                sub_time_cost += 3
 
-                # Update last_customer_id to the new one
+                if customer['ready_time'] == 0:
+                    A_Customer.append(customer_satisfaction)
+                else:
+                    B_Customer.append(customer_satisfaction)
+
                 last_customer_id = customer_id
 
-            # Adding this to total cost
-            total_satisfaction = total_satisfaction + sub_satisfaction
+            # 加权计算平均满意度
+            A_Satisfaction = 0
+            B_Satisfaction = 0
 
-        return total_satisfaction / self.json_instance['Number_of_customers']
+            for s in A_Customer:
+                A_Satisfaction += s
+            for s in B_Customer:
+                B_Satisfaction += s
+
+        return A_Satisfaction * self.A / len(A_Customer) + B_Satisfaction * self.B / len(B_Customer)
 
     # 返回带子路径的二维数组
     def routeToSubroute(self, individual):
@@ -433,7 +442,7 @@ class nsgaAlgo():
         total_cost = self.getRouteCost(individual, unit_cost)
 
         # 获取满意度
-        # satisfaction = self.getSatisfaction(individual)
+        satisfaction = self.getSatisfaction(individual)
 
         # return (1 / satisfaction * 100, vehicles + route_cost)
         return (vehicles, total_cost)
