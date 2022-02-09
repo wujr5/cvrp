@@ -2,6 +2,7 @@ from copy import deepcopy
 import os
 import io
 import random
+from tracemalloc import start
 import numpy
 import csv
 from functools import cmp_to_key
@@ -23,7 +24,7 @@ class nsgaAlgo():
         self.num_gen = numGen
         self.toolbox = base.Toolbox()
 
-        self.A = 0.7  # 顾客时间窗左端（即 ready time）=0
+        self.A = 0.5  # 顾客时间窗左端（即 ready time）=0
         self.B = 1 - self.A  # 其余则为B类，A + B = 1
 
         # self.logbook, self.stats = self.createStatsObjs()
@@ -41,7 +42,7 @@ class nsgaAlgo():
         if os.path.exists(path=csv_file):
             with io.open(csv_file, 'rt', newline='') as f:
                 f_csv = list(csv.reader(f))
-                speed = {}
+                speed_config = {}
                 for i in range(1, len(f_csv)):
                     timestr = f_csv[i][0]
                     speedstr = float(f_csv[i][1].replace(' ', ''))
@@ -50,16 +51,32 @@ class nsgaAlgo():
 
                     # 记录最早的时间点
                     if i == 1:
-                        speed[0] = timestrGap[0].split(':')
+                        speed_config[0] = timestrGap[0].split(':')
 
                     end = timestrGap[1].split(':')
 
                     # 计算跟最早时间点的时间段
                     timegap = datetime.timedelta(
                         hours=int(end[0]), minutes=int(end[1])) - (datetime.timedelta(
-                            hours=int(speed[0][0]), minutes=int(speed[0][1])))
+                            hours=int(speed_config[0][0]), minutes=int(speed_config[0][1])))
 
-                    speed[timegap.total_seconds() / 60] = speedstr
+                    speed_config[timegap.total_seconds() / 60] = speedstr
+
+                speed = {}
+                time_keys = list(speed_config.keys())
+                time_keys.remove(0)
+                time_keys.sort()
+
+                last_time = 0
+                last_distance = 0
+                for t in time_keys:
+                    for k in range(last_time, int(t)):
+                        speed[k + 1] = round(last_distance +
+                                             speed_config[t] *
+                                             (k + 1 - last_time) / 60, 2)
+
+                    last_time = int(t)
+                    last_distance = speed[int(t)]
 
                 return speed
         return None
@@ -67,9 +84,9 @@ class nsgaAlgo():
     # 设置 deap 库需要使用的各个函数
     def createCreators(self):
         # 适应值函数
-        creator.create('FitnessMin', base.Fitness, weights=(-1.0, -1.0))
+        creator.create('FitnessMulti', base.Fitness, weights=(1.0, -1.0))
         # 创建个体容器
-        creator.create('Individual', list, fitness=creator.FitnessMin)
+        creator.create('Individual', list, fitness=creator.FitnessMulti)
 
         # 初始化种群方式：随机
         # self.toolbox.register('indexes', random.sample, range(
@@ -187,7 +204,7 @@ class nsgaAlgo():
                 best_fitness_count = 0
 
             print(
-                f'迭代：{gen + 1}，车辆：{best_individual.fitness.values[0]}，距离：{best_individual.fitness.values[1]}，相同次数：{best_fitness_count}')
+                f'迭代：{gen + 1}，满意：{best_individual.fitness.values[0]}，成本：{best_individual.fitness.values[1]}，相同次数：{best_fitness_count}')
 
             # 生成日志
             # self.recordStat(self.offsprings, self.logbook,
@@ -265,11 +282,21 @@ class nsgaAlgo():
 
         return creator.Individual(list(ind))
 
+    # 根据输入的速度数据获取消耗的时间
+    def getTimeCostByInputSpeed(self, startTime, distance):
+        d = distance / 10
+        find_d = 0
+        time_cost = 1
+
+        while find_d < d:
+            find_d += self.speed[startTime + time_cost]
+
+        return time_cost
+
     # 满意度函数
     def getSatisfaction(self, individual):
-        speed = 30  # 行驶速度
-        left_edge = 100  # 可容忍早到时间
-        right_edge = 100  # 可容忍迟到时间
+        left_edge = 20  # 可容忍早到时间
+        right_edge = 20  # 可容忍迟到时间
 
         all_sub_route = self.routeToSubroute(individual)
         A_Customer = []
@@ -283,7 +310,9 @@ class nsgaAlgo():
                 customer_satisfaction = 0
                 customer = self.json_instance["customer_" + str(customer_id)]
                 distance = self.json_instance["distance_matrix"][last_customer_id][customer_id]
-                sub_time_cost = sub_time_cost + distance / speed
+
+                sub_time_cost = sub_time_cost + self.getTimeCostByInputSpeed(
+                    sub_time_cost, distance)
 
                 # 早到 left_edge 分钟内
                 if sub_time_cost >= (customer['ready_time'] - left_edge) and sub_time_cost < customer['ready_time']:
@@ -445,7 +474,7 @@ class nsgaAlgo():
         satisfaction = self.getSatisfaction(individual)
 
         # return (1 / satisfaction * 100, vehicles + route_cost)
-        return (vehicles, total_cost)
+        return (satisfaction, vehicles * 30 + total_cost / 10 * 20)
 
     # Statistics and Logging
 
@@ -487,8 +516,8 @@ class nsgaAlgo():
 
         # Printing the best after all generations
         print(f"最好：{self.best_individual}")
-        print(f"车辆：{self.best_individual.fitness.values[0]}")
-        print(f"距离：{self.best_individual.fitness.values[1]}")
+        print(f"满意：{self.best_individual.fitness.values[0]}")
+        print(f"成本：{self.best_individual.fitness.values[1]}")
 
         # Printing the route from the best individual
         self.printRoute(self.routeToSubroute(self.best_individual))
