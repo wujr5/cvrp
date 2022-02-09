@@ -2,7 +2,6 @@ from copy import deepcopy
 import os
 import io
 import random
-from tracemalloc import start
 import numpy
 import csv
 from functools import cmp_to_key
@@ -15,13 +14,14 @@ BASE_DIR = os.path.abspath(os.path.dirname(__file__))
 
 class nsgaAlgo():
 
-    def __init__(self, popSize, mutProb, numGen):
+    def __init__(self, popSize, mutProb, numGen, type):
         self.json_instance = self.load_instance('./data/json/RC104.json')
         self.speed = self.load_speed('./data/speed.csv')
         self.ind_size = self.json_instance['Number_of_customers']
         self.pop_size = popSize
         self.mut_prob = mutProb
         self.num_gen = numGen
+        self.type = type
         self.toolbox = base.Toolbox()
 
         self.A = 0.5  # 顾客时间窗左端（即 ready time）=0
@@ -89,12 +89,14 @@ class nsgaAlgo():
         creator.create('Individual', list, fitness=creator.FitnessMulti)
 
         # 初始化种群方式：随机
-        # self.toolbox.register('indexes', random.sample, range(
-        #     1, self.ind_size + 1), self.ind_size)
+        if self.type == 1:
+            self.toolbox.register('indexes', random.sample, range(
+                1, self.ind_size + 1), self.ind_size)
 
         # 初始化种群方式：随机抽取顾客点后，根据距离长短
-        self.toolbox.register('indexes', self.initPopulation, range(
-            1, self.ind_size + 1), self.ind_size)
+        else:
+            self.toolbox.register('indexes', self.initPopulation, range(
+                1, self.ind_size + 1), self.ind_size)
 
         # 个体初始化函数
         self.toolbox.register('individual', tools.initIterate,
@@ -184,9 +186,9 @@ class nsgaAlgo():
                 new4 = self.toolbox.mutate(new2)
                 self.offsprings += [new3, new4]
 
-            # 2-opt操作
             for i in range(len(self.offsprings)):
-                self.offsprings[i] = self.operate2opt(self.offsprings[i])
+                # 2-opt操作
+                # self.offsprings[i] = self.operate2opt(self.offsprings[i])
                 # 重新计算适应值
                 self.offsprings[i].fitness.values = self.toolbox.evaluate(
                     self.offsprings[i])
