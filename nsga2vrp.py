@@ -51,20 +51,20 @@ class nsgaAlgo():
 
                     # 记录最早的时间点
                     if i == 1:
-                        speed_config[0] = timestrGap[0].split(':')
+                        speed_config[-1.0] = timestrGap[0].split(':')
 
                     end = timestrGap[1].split(':')
 
                     # 计算跟最早时间点的时间段
                     timegap = datetime.timedelta(
                         hours=int(end[0]), minutes=int(end[1])) - (datetime.timedelta(
-                            hours=int(speed_config[0][0]), minutes=int(speed_config[0][1])))
+                            hours=int(speed_config[-1][0]), minutes=int(speed_config[-1][1])))
 
                     speed_config[timegap.total_seconds() / 60] = speedstr
 
-                speed = {}
+                speed = {0.0: 0.0}
                 time_keys = list(speed_config.keys())
-                time_keys.remove(0)
+                time_keys.remove(-1)
                 time_keys.sort()
 
                 last_time = 0
@@ -163,6 +163,7 @@ class nsgaAlgo():
     def runGenerations(self):
         best_fitness = 0
         best_fitness_count = 0
+        type_config = {1: '随机', 2: '定向'}
 
         for gen in range(self.num_gen):
 
@@ -206,7 +207,7 @@ class nsgaAlgo():
                 best_fitness_count = 0
 
             print(
-                f'迭代：{gen + 1}，满意：{best_individual.fitness.values[0]}，成本：{best_individual.fitness.values[1]}，相同次数：{best_fitness_count}')
+                f'迭代：{gen + 1}，变异：{self.mut_prob}，类型：{type_config[self.type]}，满意：{best_individual.fitness.values[0]}，成本：{best_individual.fitness.values[1]}，相同次数：{best_fitness_count}')
 
             # 生成日志
             # self.recordStat(self.offsprings, self.logbook,
@@ -291,7 +292,9 @@ class nsgaAlgo():
         time_cost = 1
 
         while find_d < d:
-            find_d += self.speed[startTime + time_cost]
+            find_d = self.speed[startTime + time_cost] - \
+                self.speed[float(startTime)]
+            time_cost += 1
 
         return time_cost
 
@@ -355,7 +358,7 @@ class nsgaAlgo():
             for s in B_Customer:
                 B_Satisfaction += s
 
-        return A_Satisfaction * self.A / len(A_Customer) + B_Satisfaction * self.B / len(B_Customer)
+        return round(A_Satisfaction * self.A / len(A_Customer) + B_Satisfaction * self.B / len(B_Customer), 2)
 
     # 返回带子路径的二维数组
     def routeToSubroute(self, individual):
@@ -517,12 +520,12 @@ class nsgaAlgo():
         self.best_individual = tools.selBest(self.pop, 1)[0]
 
         # Printing the best after all generations
-        print(f"最好：{self.best_individual}")
-        print(f"满意：{self.best_individual.fitness.values[0]}")
-        print(f"成本：{self.best_individual.fitness.values[1]}")
+        # print(f"最好：{self.best_individual}")
+        # print(
+        #     f"最好的样本：满意：{self.best_individual.fitness.values[0]}，成本：{self.best_individual.fitness.values[1]}")
 
         # Printing the route from the best individual
-        self.printRoute(self.routeToSubroute(self.best_individual))
+        # self.printRoute(self.routeToSubroute(self.best_individual))
 
     def doExport(self):
         csv_file_name = f"{self.json_instance['instance_name']}_" \
@@ -545,5 +548,5 @@ class nsgaAlgo():
     def runMain(self):
         self.generatingPopFitness()
         self.runGenerations()
-        self.getBestInd()
+        # self.getBestInd()
         # self.doExport()
