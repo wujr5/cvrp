@@ -300,8 +300,8 @@ class nsgaAlgo():
 
     # 满意度函数
     def getSatisfaction(self, individual):
-        left_edge = 20  # 可容忍早到时间
-        right_edge = 20  # 可容忍迟到时间
+        left_edge = 10  # 可容忍早到时间
+        right_edge = 10  # 可容忍迟到时间
 
         all_sub_route = self.routeToSubroute(individual)
         A_Customer = []
