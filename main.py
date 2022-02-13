@@ -29,13 +29,17 @@ def main():
 
 def run_30_times():
 
-    nsgaObj = nsgaAlgo(120, 0.02, 1000, 1)
-
     # typeObj = {1: '随机', 2: '定向'}
     # print(
     #     f'种群大小：{args.popSize}，变异率：{args.pb}，初始化类型：{typeObj[args.type]}，迭代数：{args.numGen}')
 
-    nsgaObj.runMain()
+    nsgaObj = nsgaAlgo(popSize=120, mutProb=0.02, numGen=1000, type=2)
+
+    for i in range(30):
+        print(f'第 {i + 1} 轮')
+        nsgaObj.reset()
+        nsgaObj.runMain()
+        nsgaObj.doExport(i + 1)
 
 
 if __name__ == '__main__':

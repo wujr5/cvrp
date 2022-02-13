@@ -27,8 +27,14 @@ class nsgaAlgo():
         self.A = 0.5  # 顾客时间窗左端（即 ready time）=0
         self.B = 1 - self.A  # 其余则为B类，A + B = 1
 
-        # self.logbook, self.stats = self.createStatsObjs()
+        self.logbook = tools.Logbook()
+        self.logbook.header = "generation", "fitness"
+
         self.createCreators()
+
+    def reset(self):
+        self.logbook = tools.Logbook()
+        self.logbook.header = "generation", "fitness"
 
     # 加载 json 文件
     def load_instance(self, json_file):
@@ -156,9 +162,6 @@ class nsgaAlgo():
         for ind in self.pop:
             ind.fitness.values = self.toolbox.evaluate(ind)
 
-        # self.recordStat(self.invalid_ind, self.logbook,
-        #                 self.pop, self.stats, gen=0)
-
     # 运行入口
     def runGenerations(self):
         best_fitness = 0
@@ -198,20 +201,20 @@ class nsgaAlgo():
             self.pop = self.toolbox.select(
                 self.pop + self.offsprings, self.pop_size)
 
-            best_individual = tools.selBest(self.pop, 1)[0]
+            self.best_individual = tools.selBest(self.pop, 1)[0]
 
-            if best_fitness == best_individual.fitness.values[1]:
+            if best_fitness == self.best_individual.fitness.values[1]:
                 best_fitness_count += 1
             else:
-                best_fitness = best_individual.fitness.values[1]
+                best_fitness = self.best_individual.fitness.values[1]
                 best_fitness_count = 0
 
             print(
-                f'迭代：{gen + 1}，变异：{self.mut_prob}，类型：{type_config[self.type]}，满意：{best_individual.fitness.values[0]}，成本：{best_individual.fitness.values[1]}，相同次数：{best_fitness_count}')
+                f'迭代：{gen + 1}，变异：{self.mut_prob}，类型：{type_config[self.type]}，满意：{self.best_individual.fitness.values[0]}，成本：{self.best_individual.fitness.values[1]}，相同次数：{best_fitness_count}')
 
             # 生成日志
-            # self.recordStat(self.offsprings, self.logbook,
-            #                 self.pop, self.stats, gen + 1)
+            self.logbook.record(
+                generation=gen + 1, fitness=f'{self.best_individual.fitness.values}')
 
     # 2-opt 算法
     def operate2opt(self, ind):
@@ -481,47 +484,8 @@ class nsgaAlgo():
         # return (1 / satisfaction * 100, vehicles + route_cost)
         return (satisfaction, vehicles * 3 + total_cost * 5)
 
-    # Statistics and Logging
-
-    def createStatsObjs(self):
-        # Method to create stats and logbook objects
-        """
-        Inputs : None
-        Outputs : tuple of logbook and stats objects.
-        """
-        stats = tools.Statistics(lambda ind: ind.fitness.values)
-        stats.register("avg", numpy.mean, axis=0)
-        stats.register("std", numpy.std, axis=0)
-        stats.register("min", numpy.min, axis=0)
-        stats.register("max", numpy.max, axis=0)
-
-        # Methods for logging
-        logbook = tools.Logbook()
-        logbook.header = "Generation", "evals", "avg", "std", "min", "max", "best_one", "fitness_best_one"
-        return logbook, stats
-
-    def recordStat(self, invalid_ind, logbook, pop, stats, gen):
-        """
-        Inputs : invalid_ind - Number of children for which fitness is calculated
-                logbook - Logbook object that logs data
-                pop - population
-                stats - stats object that compiles statistics
-        Outputs: None, prints the logs
-        """
-        record = stats.compile(pop)
-        best_individual = tools.selBest(pop, 1)[0]
-        record["best_one"] = best_individual
-        record["fitness_best_one"] = best_individual.fitness
-        logbook.record(Generation=gen, evals=len(invalid_ind), **record)
-        print(
-            f'迭代：{gen}，车辆：{best_individual.fitness.values[0]}，距离：{best_individual.fitness.values[1]}')
-
     def getBestInd(self):
-        best_individual = tools.selBest(self.pop, 120)
-
-        print('前120个最优解：\n')
-        for ind in best_individual:
-            print(ind.fitness.values)
+        self.best_individual = tools.selBest(self.pop, 1)[0]
 
         # Printing the best after all generations
         # print(f"最好：{self.best_individual}")
@@ -531,26 +495,34 @@ class nsgaAlgo():
         # Printing the route from the best individual
         # self.printRoute(self.routeToSubroute(self.best_individual))
 
-    def doExport(self):
-        csv_file_name = f"{self.json_instance['instance_name']}_" \
-            f"pop{self.pop_size}" \
-            f"_mutProb{self.mut_prob}_numGen{self.num_gen}.csv"
-        self.exportCsv(csv_file_name, self.logbook)
-
-    def exportCsv(self, csv_file_name, logbook):
-        csv_columns = logbook[0].keys()
+    # 生成 csv 文件
+    def doExport(self, times=1):
+        csv_file_name = f"{self.json_instance['instance_name']}_result_{times}.csv"
+        csv_columns = self.logbook[0].keys()
         csv_path = os.path.join(BASE_DIR, "results", csv_file_name)
+
         try:
-            with open(csv_path, 'w') as csvfile:
+            with open(csv_path, 'w', encoding='utf8') as csvfile:
                 writer = csv.DictWriter(csvfile, fieldnames=csv_columns)
                 writer.writeheader()
-                for data in logbook:
+                for data in self.logbook:
                     writer.writerow(data)
+
+                csvfile.writelines('\n')
+                csvfile.writelines(
+                    f'最好的粒子：{self.best_individual}\n')
+
+                csvfile.writelines('\n')
+
+                csvfile.writelines('所有解：\n')
+                pops = tools.selBest(self.pop, 120)
+                for ind in pops:
+                    csvfile.writelines(f'{ind.fitness.values}\n')
+
         except IOError:
             print("I/O error: ", csv_path, csv_file_name)
 
     def runMain(self):
         self.generatingPopFitness()
         self.runGenerations()
-        # self.getBestInd()
         # self.doExport()
