@@ -40,7 +40,7 @@ class nsgaAlgo():
     # 读取速度文件
     def load_speed(self, csv_file):
         if os.path.exists(path=csv_file):
-            with io.open(csv_file, 'rt', newline='') as f:
+            with io.open(csv_file, 'rt', newline='', encoding='utf8') as f:
                 f_csv = list(csv.reader(f))
                 speed_config = {}
                 for i in range(1, len(f_csv)):
@@ -479,7 +479,7 @@ class nsgaAlgo():
         satisfaction = self.getSatisfaction(individual)
 
         # return (1 / satisfaction * 100, vehicles + route_cost)
-        return (satisfaction, vehicles * 30 + total_cost / 10 * 20)
+        return (satisfaction, vehicles * 3 + total_cost * 5)
 
     # Statistics and Logging
 
@@ -517,7 +517,11 @@ class nsgaAlgo():
             f'迭代：{gen}，车辆：{best_individual.fitness.values[0]}，距离：{best_individual.fitness.values[1]}')
 
     def getBestInd(self):
-        self.best_individual = tools.selBest(self.pop, 1)[0]
+        best_individual = tools.selBest(self.pop, 120)
+
+        print('前120个最优解：\n')
+        for ind in best_individual:
+            print(ind.fitness.values)
 
         # Printing the best after all generations
         # print(f"最好：{self.best_individual}")
