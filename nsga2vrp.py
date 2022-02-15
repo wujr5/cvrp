@@ -8,6 +8,8 @@ from functools import cmp_to_key
 import datetime
 from json import load
 from deap import base, creator, tools
+import matplotlib.pyplot as plt
+import pandas as pd
 
 BASE_DIR = os.path.abspath(os.path.dirname(__file__))
 
@@ -521,6 +523,70 @@ class nsgaAlgo():
 
         except IOError:
             print("I/O error: ", csv_path, csv_file_name)
+
+    def getCoordinatesDframe(self):
+        num_of_cust = self.json_instance['Number_of_customers']
+        # Getting all customer coordinates
+        customer_list = [i for i in range(1, num_of_cust + 1)]
+        x_coord_cust = [
+            self.json_instance[f'customer_{i}']['coordinates']['x'] for i in customer_list]
+        y_coord_cust = [
+            self.json_instance[f'customer_{i}']['coordinates']['y'] for i in customer_list]
+        # Getting depot x,y coordinates
+        depot_x = [self.json_instance['depart']['coordinates']['x']]
+        depot_y = [self.json_instance['depart']['coordinates']['y']]
+        # Adding depot details
+        customer_list = [0] + customer_list
+        x_coord_cust = depot_x + x_coord_cust
+        y_coord_cust = depot_y + y_coord_cust
+        df = pd.DataFrame({"X": x_coord_cust,
+                           "Y": y_coord_cust,
+                           "customer_list": customer_list
+                           })
+        return df
+
+    def plotSubroute(self, subroute, dfhere, color):
+        totalSubroute = [0]+subroute+[0]
+        subroutelen = len(subroute)
+        for i in range(subroutelen+1):
+            firstcust = totalSubroute[0]
+            secondcust = totalSubroute[1]
+            plt.plot([dfhere.X[firstcust], dfhere.X[secondcust]],
+                     [dfhere.Y[firstcust], dfhere.Y[secondcust]], c=color)
+            totalSubroute.pop(0)
+
+    def plotRoute(self, route, csv_title):
+        # Loading the instance
+
+        subroutes = self.routeToSubroute(route)
+        colorslist = ["blue", "green", "red", "cyan",
+                      "magenta", "yellow", "black", "#f1a03a", "#fbe5e4", "#2568f6"]
+        colorindex = 0
+
+        # getting df
+        dfhere = self.getCoordinatesDframe()
+
+        # Plotting scatter
+        plt.figure(figsize=(10, 10))
+
+        for i in range(dfhere.shape[0]):
+            if i == 0:
+                plt.scatter(dfhere.X[i], dfhere.Y[i], c='green', s=200)
+                plt.text(dfhere.X[i], dfhere.Y[i], "depot", fontsize=12)
+            else:
+                plt.scatter(dfhere.X[i], dfhere.Y[i], c='orange', s=200)
+                plt.text(dfhere.X[i], dfhere.Y[i], f'{i}', fontsize=12)
+
+        # Plotting routes
+        for route in subroutes:
+            self.plotSubroute(route, dfhere, color=colorslist[colorindex])
+            colorindex += 1
+
+        # Plotting is done, adding labels, Title
+        plt.xlabel("X - Coordinate")
+        plt.ylabel("Y - Coordinate")
+        plt.title(csv_title)
+        plt.savefig(f"./figures/Route_{csv_title}.png")
 
     def runMain(self):
         self.generatingPopFitness()

@@ -5,7 +5,6 @@ import numpy as np
 import ast
 import json
 import glob
-from NSGA2_vrp import load_instance, routeToSubroute, eval_indvidual_fitness
 
 
 def loadResultPaths():
