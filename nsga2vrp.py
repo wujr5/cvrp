@@ -26,8 +26,11 @@ class nsgaAlgo():
         self.type = type
         self.toolbox = base.Toolbox()
 
-        self.A = 0.5  # 顾客时间窗左端（即 ready time）=0
+        self.A = 0.8  # 顾客时间窗左端（即 ready time）=0
         self.B = 1 - self.A  # 其余则为B类，A + B = 1
+
+        # 车辆出发原点时间，0，表示 6:00，1 单位时间是 1 分钟
+        self.original_time = (11 - 6) * 60  # 设置为下午 13:00 出发
 
         self.logbook = tools.Logbook()
         self.logbook.header = "generation", "fitness"
@@ -211,12 +214,14 @@ class nsgaAlgo():
                 best_fitness = self.best_individual.fitness.values[1]
                 best_fitness_count = 0
 
-            print(
-                f'迭代：{gen + 1}，变异：{self.mut_prob}，类型：{type_config[self.type]}，满意：{self.best_individual.fitness.values[0]}，成本：{self.best_individual.fitness.values[1]}，相同次数：{best_fitness_count}')
+            # print(
+            #     f'迭代：{gen + 1}，变异：{self.mut_prob}，类型：{type_config[self.type]}，满意：{self.best_individual.fitness.values[0]}，成本：{self.best_individual.fitness.values[1]}，相同次数：{best_fitness_count}')
 
             # 生成日志
             self.logbook.record(
                 generation=gen + 1, fitness=f'{self.best_individual.fitness.values}')
+        print(
+            f'变异：{self.mut_prob}，类型：{type_config[self.type]}，满意：{self.best_individual.fitness.values[0]}，成本：{self.best_individual.fitness.values[1]}')
 
     # 2-opt 算法
     def operate2opt(self, ind):
@@ -292,13 +297,16 @@ class nsgaAlgo():
 
     # 根据输入的速度数据获取消耗的时间
     def getTimeCostByInputSpeed(self, startTime, distance):
+        # 加上出发时间
+        t = startTime + self.original_time
+
         d = distance / 10
         find_d = 0
         time_cost = 1
 
         while find_d < d:
-            find_d = self.speed[startTime + time_cost] - \
-                self.speed[float(startTime)]
+            find_d = self.speed[t + time_cost] - \
+                self.speed[float(t)]
             time_cost += 1
 
         return time_cost
@@ -567,7 +575,7 @@ class nsgaAlgo():
         dfhere = self.getCoordinatesDframe()
 
         # Plotting scatter
-        plt.figure(figsize=(10, 10))
+        plt.figure(figsize=(10, 10), dpi=144)
 
         for i in range(dfhere.shape[0]):
             if i == 0:
