@@ -397,7 +397,14 @@ class nsgaAlgo():
             for s in B_Customer:
                 B_Satisfaction += s
 
-        return round(A_Satisfaction * self.A / len(A_Customer) + B_Satisfaction * self.B / len(B_Customer), 2)
+        rate_a = 0
+        rate_b = 0
+        if len(A_Customer) != 0:
+            rate_a = 1 / len(A_Customer)
+        if len(B_Customer) != 0:
+            rate_b = 1 / len(B_Customer)
+
+        return round(A_Satisfaction * self.A * rate_a + B_Satisfaction * self.B * rate_b, 2)
 
     # 返回带子路径的二维数组
     def routeToSubroute(self, individual):
