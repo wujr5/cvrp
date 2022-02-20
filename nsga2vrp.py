@@ -28,7 +28,7 @@ class nsgaAlgo():
         self.type = type
         self.toolbox = base.Toolbox()
 
-        self.A = 0.8  # 顾客时间窗左端（即 ready time）=0
+        self.A = 0.5  # 顾客时间窗左端（即 ready time）=0
         self.B = 1 - self.A  # 其余则为B类，A + B = 1
 
         # 车辆出发原点时间，0，表示 6:00，1 单位时间是 1 分钟
@@ -163,7 +163,7 @@ class nsgaAlgo():
         return result
 
     # 初始化适应值
-    def initPopulation(self):
+    def init_generation(self):
         self.pop = self.toolbox.population(n=self.pop_size)
 
         for ind in self.pop:
@@ -178,19 +178,20 @@ class nsgaAlgo():
         for gen in range(self.num_gen):
 
             # 选择用于交配的后代
-            self.parents = tools.selTournament(
-                self.pop, int(len(self.pop) / 2), int(len(self.pop) / 2))
+            self.parents = tools.selBest(self.pop, 90)
 
             self.offsprings = []
 
             # 交配与变异操作
-            for i in range(int(len(self.parents) / 2)):
-                ind1 = self.parents[i]
-                ind2 = self.parents[i * 2 + 1]
+            for i in range(90):
+                select = random.sample(list(range(90)), 2)
+                ind1 = self.parents[select[0]]
+                ind2 = self.parents[select[1]]
 
                 # 交配
-                new1, new2 = self.toolbox.mate(ind1, ind2)
-                self.offsprings += [new1, new2]
+                if random.random() < 0.7:
+                    new1, new2 = self.toolbox.mate(ind1, ind2)
+                    self.offsprings += [new1, new2]
 
                 # 变异
                 new3 = self.toolbox.mutate(new1)
@@ -199,8 +200,8 @@ class nsgaAlgo():
 
             for i in range(len(self.offsprings)):
                 # 2-opt操作
-                if self.type != 1:
-                    self.offsprings[i] = self.operate2opt(self.offsprings[i])
+                # if self.type != 1:
+                # self.offsprings[i] = self.operate2opt(self.offsprings[i])
                 # 重新计算适应值
                 self.offsprings[i].fitness.values = self.toolbox.evaluate(
                     self.offsprings[i])
@@ -223,8 +224,8 @@ class nsgaAlgo():
             # 生成日志
             self.logbook.record(
                 generation=gen + 1, fitness=f'{self.best_individual.fitness.values}')
-        print(
-            f'变异：{self.mut_prob}，类型：{type_config[self.type]}，车辆：{self.best_individual.fitness.values[0]}，距离：{self.best_individual.fitness.values[1]}')
+        # print(
+        #     f'变异：{self.mut_prob}，类型：{type_config[self.type]}，车辆：{self.best_individual.fitness.values[0]}，距离：{self.best_individual.fitness.values[1]}')
 
     def getDistance(self, ind):
         all_sub_route = self.routeToSubroute(ind)
@@ -283,27 +284,59 @@ class nsgaAlgo():
         def cmp(a, b):
             return a[1] - b[1]
 
-        # cross over 方式交配
-        def cross(item1, item2, a, b):
-            newitem = [0 for i in item1]
+        # 根据左时间窗进行交叉
+        def crossByLeftTime(item1, item2):
+            length = len(item1)
+            newitem = []
 
-            for i in range(a, b + 1):
-                newitem[i] = item1[i]
-                item2.remove(item1[i])
+            # 取出客户点，插入指定位置
+            def insertPos(ind, customer, pos):
+                ind.remove(customer)
+                ind.insert(pos, customer)
 
-            for i in item2:
-                newitem[newitem.index(0)] = i
+            for i in range(0, length):
+                ready_time_1 = self.json_instance[f"customer_{item1[i]}"]["ready_time"]
+                ready_time_2 = self.json_instance[f"customer_{item2[i]}"]["ready_time"]
+
+                if ready_time_1 < ready_time_2:
+                    newitem.append(item1[i])
+                    insertPos(item2, item1[i], i)
+                else:
+                    newitem.append(item2[i])
+                    insertPos(item1, item2[i], i)
 
             return newitem
 
-        # 选取两个切片位置，并保证 a < b
-        a, b = random.sample(range(self.ind_size), 2)
-        if a > b:
-            a, b = b, a
+        # 根据最小距离进行交叉
+        def crossByDistance(item1, item2):
+            length = len(item1)
+            newitem = []
+
+            # 交换两个客户点的位置
+            def swapPos(ind, customer, pos):
+                pos_new = ind.index(customer)
+                ind[pos], ind[pos_new] = ind[pos_new], ind[pos]
+
+            for i in range(0, length):
+                if i == 0:
+                    rand = random.randint(0, 1)
+                    newitem = [item1[0] if rand == 0 else item2[0]]
+                    swapPos(item2 if rand == 0 else item1, newitem[0], i)
+                else:
+                    distance_1 = self.json_instance["distance_matrix"][newitem[i - 1]][item1[i]]
+                    distance_2 = self.json_instance["distance_matrix"][newitem[i - 1]][item2[i]]
+
+                    if distance_1 < distance_2:
+                        newitem.append(item1[i])
+                        swapPos(item2, item1[i], i)
+                    else:
+                        newitem.append(item2[i])
+                        swapPos(item1, item2[i], i)
+            return newitem
 
         # 存放子代
-        new1 = cross(deepcopy(input_ind1), deepcopy(input_ind2), a, b)
-        new2 = cross(deepcopy(input_ind2), deepcopy(input_ind1), a, b)
+        new1 = crossByLeftTime(deepcopy(input_ind1), deepcopy(input_ind2))
+        new2 = crossByDistance(deepcopy(input_ind1), deepcopy(input_ind2))
 
         return creator.Individual(list(new1)), creator.Individual(list(new2))
 
@@ -314,10 +347,9 @@ class nsgaAlgo():
 
         for i in range(size):
             if random.random() < self.mut_prob:
-                swap_indx = random.randint(0, size - 2)
-                if swap_indx >= i:
-                    swap_indx += 1
-                ind[i], ind[swap_indx] = ind[swap_indx], ind[i]
+                swap_indx1 = random.randint(0, size - 1)
+                swap_indx2 = random.randint(0, size - 1)
+                ind[swap_indx1], ind[swap_indx2] = ind[swap_indx2], ind[swap_indx1]
 
         return creator.Individual(list(ind))
 
@@ -408,23 +440,37 @@ class nsgaAlgo():
 
     # 返回带子路径的二维数组
     def routeToSubroute(self, individual):
-        instance = self.json_instance
         route = []
         sub_route = []
         vehicle_load = 0
-        vehicle_capacity = instance['vehicle_capacity']
+        vehicle_capacity = self.json_instance['vehicle_capacity']
+        speed = 1
+
+        last_customer_id = 0
+        time_cost = 0
+        time_gap = 0
 
         for customer_id in individual:
-            demand = instance[f"customer_{customer_id}"]["demand"]
-            updated_vehicle_load = vehicle_load + demand
+            distance = self.json_instance["distance_matrix"][last_customer_id][customer_id]
+            demand = self.json_instance[f"customer_{customer_id}"]["demand"]
+            due_time = self.json_instance[f"customer_{customer_id}"]["due_time"]
+            service_time = self.json_instance[f"customer_{customer_id}"]["service_time"]
 
-            if(updated_vehicle_load <= vehicle_capacity):
+            updated_vehicle_load = vehicle_load + demand
+            time_cost = time_cost + distance / speed
+
+            if updated_vehicle_load <= vehicle_capacity and time_cost <= (due_time + time_gap):
                 sub_route.append(customer_id)
                 vehicle_load = updated_vehicle_load
+                time_cost += service_time
             else:
                 route.append(sub_route)
                 sub_route = [customer_id]
                 vehicle_load = demand
+                time_cost = self.json_instance["distance_matrix"][0][customer_id] / \
+                    speed + service_time
+
+            last_customer_id = customer_id
 
         if sub_route != []:
             route.append(sub_route)
@@ -490,7 +536,7 @@ class nsgaAlgo():
 
                 # 早到惩罚、迟到惩罚
                 if time_cost < ready_time or time_cost > due_time:
-                    punishment_cost += 1000
+                    punishment_cost += 10
 
                 time_cost += service_time
 
@@ -542,15 +588,15 @@ class nsgaAlgo():
     def evaluate(self, individual, unit_cost=1):
 
         # 用车成本
-        # vehicles = self.getVehicleNum(individual)
+        vehicles = self.getVehicleNum(individual)
 
         # 路程成本
         total_cost, total_distance = self.getRouteCost(individual, unit_cost)
 
         # 获取满意度
-        satisfaction = self.getSatisfaction(individual)
+        # satisfaction = self.getSatisfaction(individual)
 
-        return satisfaction * 100 + total_cost, None
+        return vehicles * 10000 + total_distance,
         # return (vehicles, total_cost)
         # return (satisfaction, vehicles * 3 + total_cost * 5)
 
@@ -647,6 +693,6 @@ class nsgaAlgo():
         plt.savefig(f"./figures/Route_{csv_title}.png")
 
     def runMain(self):
-        self.initPopulation()
+        self.init_generation()
         self.runGenerations()
         # self.doExport()

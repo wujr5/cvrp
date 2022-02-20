@@ -47,7 +47,7 @@ def run_30_times():
     args = parser.parse_args()
 
     nsgaObj = nsgaAlgo(popSize=120, mutProb=args.pb,
-                       numGen=1000, type=args.type, file=args.file)
+                       numGen=2000, type=args.type, file=args.file)
 
     for i in range(30):
         print(f'第 {i + 1} 轮')
