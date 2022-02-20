@@ -16,8 +16,9 @@ BASE_DIR = os.path.abspath(os.path.dirname(__file__))
 
 class nsgaAlgo():
 
-    def __init__(self, popSize, mutProb, numGen, type, file):
+    def __init__(self, popSize, mutProb, numGen, type, file, baseAl=2):
         self.file = file
+        self.base = baseAl
         self.json_instance = self.load_instance(
             f'./data/json/{self.file}.json')
         self.speed = self.load_speed('./data/speed.csv')
@@ -32,7 +33,7 @@ class nsgaAlgo():
         self.B = 1 - self.A  # 其余则为B类，A + B = 1
 
         # 车辆出发原点时间，0，表示 6:00，1 单位时间是 1 分钟
-        self.original_time = (11 - 6) * 60  # 设置为下午 13:00 出发
+        self.original_time = (7 - 6) * 60  # 设置为下午 13:00 出发
 
         self.logbook = tools.Logbook()
         self.logbook.header = "generation", "fitness"
@@ -120,13 +121,16 @@ class nsgaAlgo():
                               list, self.toolbox.individual)
 
         # 设置适应值计算函数
-        self.toolbox.register('evaluate', self.evaluate, unit_cost=1)
+        self.toolbox.register('evaluate', self.evaluate)
 
         # 设置选择算法
         self.toolbox.register("select", tools.selBest)
 
         # 设置交配算法
-        self.toolbox.register("mate", self.crossOverVrp)
+        if self.base == 1:
+            self.toolbox.register("mate", self.baseCrossOverVrp)
+        else:
+            self.toolbox.register("mate", self.crossOverVrp)
 
         # 设置变异算法
         self.toolbox.register("mutate", self.mutation)
@@ -171,8 +175,6 @@ class nsgaAlgo():
 
     # 运行入口
     def runGenerations(self):
-        best_fitness = 0
-        best_fitness_count = 0
         type_config = {1: '随机', 2: '定向'}
 
         for gen in range(self.num_gen):
@@ -188,15 +190,15 @@ class nsgaAlgo():
                 ind1 = self.parents[select[0]]
                 ind2 = self.parents[select[1]]
 
-                # 交配
-                if random.random() < 0.7:
+                if random.random() < 0.9:
+                    # 交配
                     new1, new2 = self.toolbox.mate(ind1, ind2)
                     self.offsprings += [new1, new2]
 
-                # 变异
-                new3 = self.toolbox.mutate(new1)
-                new4 = self.toolbox.mutate(new2)
-                self.offsprings += [new3, new4]
+                    # 变异
+                    new3 = self.toolbox.mutate(new1)
+                    new4 = self.toolbox.mutate(new2)
+                    self.offsprings += [new3, new4]
 
             for i in range(len(self.offsprings)):
                 # 2-opt操作
@@ -212,14 +214,8 @@ class nsgaAlgo():
 
             self.best_individual = tools.selBest(self.pop, 1)[0]
 
-            # if best_fitness == self.best_individual.fitness.values[1]:
-            #     best_fitness_count += 1
-            # else:
-            #     best_fitness = self.best_individual.fitness.values[1]
-            #     best_fitness_count = 0
-
             print(
-                f'迭代：{gen + 1}，变异：{self.mut_prob}，类型：{type_config[self.type]}，车辆：{self.getVehicleNum(self.best_individual)}，适应值：{self.best_individual.fitness.values}，成本：{self.getRouteCost(self.best_individual, 1)[0]}，距离：{self.getDistance(self.best_individual)}')
+                f'迭代：{gen + 1}，类型：{type_config[self.type]}，适应值：{self.best_individual.fitness.values}，车辆：{self.getVehicleNum(self.best_individual)}，距离：{self.getDistance(self.best_individual)}，满意度：{self.getSatisfaction(self.best_individual, True)}')
 
             # 生成日志
             self.logbook.record(
@@ -248,7 +244,7 @@ class nsgaAlgo():
             # 乘以单位成本，加上早到和迟到惩罚成本
             all_distance += sub_route_distance
 
-        return all_distance
+        return round(all_distance, 3)
 
     # 2-opt 算法
     def operate2opt(self, ind):
@@ -326,9 +322,14 @@ class nsgaAlgo():
 
             for i in range(0, length):
                 ready_time_1 = self.json_instance[f"customer_{item1[i]}"]["ready_time"]
-                ready_time_2 = self.json_instance[f"customer_{item2[i]}"]["ready_time"]
+                due_time_1 = self.json_instance[f"customer_{item1[i]}"]["due_time"]
+                avg1 = (ready_time_1 + due_time_1) / 2
 
-                if ready_time_1 < ready_time_2:
+                ready_time_2 = self.json_instance[f"customer_{item2[i]}"]["ready_time"]
+                due_time_2 = self.json_instance[f"customer_{item2[i]}"]["due_time"]
+                avg2 = (ready_time_2 + due_time_2) / 2
+
+                if avg1 < avg2:
                     newitem.append(item1[i])
                     insertPos(item2, item1[i], i)
                 else:
@@ -400,9 +401,9 @@ class nsgaAlgo():
         return time_cost
 
     # 满意度函数
-    def getSatisfaction(self, individual):
-        left_edge = 10  # 可容忍早到时间
-        right_edge = 10  # 可容忍迟到时间
+    def getSatisfaction(self, individual, debug=False):
+        left_edge = 30  # 可容忍早到时间
+        right_edge = 30  # 可容忍迟到时间
 
         all_sub_route = self.routeToSubroute(individual)
         A_Customer = []
@@ -441,7 +442,7 @@ class nsgaAlgo():
                     customer_satisfaction += 0
 
                 # 加上服务时间
-                sub_time_cost += 3
+                sub_time_cost += customer['service_time']
 
                 if customer['ready_time'] == 0:
                     A_Customer.append(customer_satisfaction)
@@ -450,14 +451,14 @@ class nsgaAlgo():
 
                 last_customer_id = customer_id
 
-            # 加权计算平均满意度
-            A_Satisfaction = 0
-            B_Satisfaction = 0
+        # 加权计算平均满意度
+        A_Satisfaction = 0
+        B_Satisfaction = 0
 
-            for s in A_Customer:
-                A_Satisfaction += s
-            for s in B_Customer:
-                B_Satisfaction += s
+        for s in A_Customer:
+            A_Satisfaction += s
+        for s in B_Customer:
+            B_Satisfaction += s
 
         rate_a = 0
         rate_b = 0
@@ -465,6 +466,9 @@ class nsgaAlgo():
             rate_a = 1 / len(A_Customer)
         if len(B_Customer) != 0:
             rate_b = 1 / len(B_Customer)
+
+        # if debug:
+        #     print(rate_a, rate_b, A_Satisfaction, B_Satisfaction)
 
         return round(A_Satisfaction * self.A * rate_a + B_Satisfaction * self.B * rate_b, 2)
 
@@ -478,7 +482,7 @@ class nsgaAlgo():
 
         last_customer_id = 0
         time_cost = 0
-        time_gap = 0
+        time_gap = 50
 
         for customer_id in individual:
             distance = self.json_instance["distance_matrix"][last_customer_id][customer_id]
@@ -532,13 +536,7 @@ class nsgaAlgo():
 
     # 计算个体的距离成本
 
-    def getRouteCost(self, individual, unit_cost=1):
-        # 总成本
-        total_cost = 0
-
-        # 硬时间窗速度
-        speed = 1
-
+    def getRouteCost(self, individual):
         all_sub_route = self.routeToSubroute(individual)
         # 所有距离
         all_distance = 0
@@ -548,28 +546,11 @@ class nsgaAlgo():
             # 从配送点出发
             last_customer_id = 0
 
-            # 单条路径的时间
-            time_cost = 0
-            # 早到或迟到惩罚
-            punishment_cost = 0
-
             for customer_id in sub_route:
                 distance = self.json_instance["distance_matrix"][last_customer_id][customer_id]
                 sub_route_distance += distance
 
                 # 去往下一个客户点需要的时间
-                time_cost = time_cost + distance / speed
-
-                ready_time = self.json_instance[f"customer_{customer_id}"]["ready_time"]
-                due_time = self.json_instance[f"customer_{customer_id}"]["due_time"]
-                service_time = self.json_instance[f"customer_{customer_id}"]["service_time"]
-
-                # 早到惩罚、迟到惩罚
-                if time_cost < ready_time or time_cost > due_time:
-                    punishment_cost += 10
-
-                time_cost += service_time
-
                 last_customer_id = customer_id
 
             # 回到配送点
@@ -577,56 +558,24 @@ class nsgaAlgo():
                 self.json_instance["distance_matrix"][last_customer_id][0]
 
             # 乘以单位成本，加上早到和迟到惩罚成本
-            # sub_route_transport_cost = unit_cost * sub_route_distance
-            sub_route_transport_cost = unit_cost * sub_route_distance + punishment_cost
 
             all_distance += sub_route_distance
-            total_cost = total_cost + sub_route_transport_cost
 
-        return total_cost, all_distance
-
-    # 计算个体的每个路径的距离成本
-
-    def getSubRouteCost(self, individual, unit_cost=1):
-        # 单条路径和成本
-        route_cost = []
-
-        all_sub_route = self.routeToSubroute(individual)
-
-        for sub_route in all_sub_route:
-            sub_route_distance = 0
-            # 从配送点出发
-            last_customer_id = 0
-
-            for customer_id in sub_route:
-                distance = self.json_instance["distance_matrix"][last_customer_id][customer_id]
-                sub_route_distance += distance
-                last_customer_id = customer_id
-
-            # 回到配送点
-            sub_route_distance = sub_route_distance + \
-                self.json_instance["distance_matrix"][last_customer_id][0]
-
-            # 乘以单位成本
-            sub_route_transport_cost = unit_cost * sub_route_distance
-
-            route_cost.append((sub_route, sub_route_transport_cost))
-
-        return route_cost
+        return all_distance
 
     # 计算适应值
-    def evaluate(self, individual, unit_cost=1):
+    def evaluate(self, individual):
 
-        # 用车成本
+        # 车辆数
         vehicles = self.getVehicleNum(individual)
 
-        # 路程成本
-        total_cost, total_distance = self.getRouteCost(individual, unit_cost)
+        # 总距离
+        total_distance = self.getRouteCost(individual)
 
-        # 获取满意度
-        # satisfaction = self.getSatisfaction(individual)
+        # 满意度
+        satisfaction = self.getSatisfaction(individual)
 
-        return vehicles * 10000 + total_distance,
+        return round(vehicles * 20 + total_distance * 2 + (100 - satisfaction) * 200, 4),
 
     # 生成 csv 文件
 
