@@ -278,6 +278,36 @@ class nsgaAlgo():
 
         return creator.Individual(list(result))
 
+    # 基础交配算法
+    def baseCrossOverVrp(self, input_ind1, input_ind2):
+        # 升序排列
+        def cmp(a, b):
+            return a[1] - b[1]
+
+        # cross over 方式交配
+        def cross(item1, item2, a, b):
+            newitem = [0 for i in item1]
+
+            for i in range(a, b + 1):
+                newitem[i] = item1[i]
+                item2.remove(item1[i])
+
+            for i in item2:
+                newitem[newitem.index(0)] = i
+
+            return newitem
+
+        # 选取两个切片位置，并保证 a < b
+        a, b = random.sample(range(self.ind_size), 2)
+        if a > b:
+            a, b = b, a
+
+        # 存放子代
+        new1 = cross(deepcopy(input_ind1), deepcopy(input_ind2), a, b)
+        new2 = cross(deepcopy(input_ind2), deepcopy(input_ind1), a, b)
+
+        return creator.Individual(list(new1)), creator.Individual(list(new2))
+
     # 交配算法
     def crossOverVrp(self, input_ind1, input_ind2):
         # 升序排列
@@ -597,8 +627,6 @@ class nsgaAlgo():
         # satisfaction = self.getSatisfaction(individual)
 
         return vehicles * 10000 + total_distance,
-        # return (vehicles, total_cost)
-        # return (satisfaction, vehicles * 3 + total_cost * 5)
 
     # 生成 csv 文件
 
