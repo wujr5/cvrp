@@ -33,7 +33,7 @@ class nsgaAlgo():
         self.B = 1 - self.A  # 其余则为B类，A + B = 1
 
         # 车辆出发原点时间，0，表示 6:00，1 单位时间是 1 分钟
-        self.original_time = (7 - 6) * 60  # 设置为下午 13:00 出发
+        self.original_time = (15 - 6) * 60  # 设置为下午 13:00 出发
 
         self.logbook = tools.Logbook()
         self.logbook.header = "generation", "fitness"
@@ -668,6 +668,17 @@ class nsgaAlgo():
         plt.ylabel("Y - Coordinate")
         plt.title(csv_title)
         plt.savefig(f"./figures/Route_{csv_title}.png")
+
+    def plotFitness(csv_file_path):
+        pd.read_csv(csv_file_path)
+        distances, generations = cleanResult(csv_file_path)
+        csv_title = csv_file_path.split("/")[-1][:-4]
+        plt.figure(figsize=(10, 10), dpi=144)
+        plt.plot(generations, distances)
+        plt.xlabel("Generations")
+        plt.ylabel("Min distance")
+        plt.title(csv_title)
+        plt.savefig(f"./figures/Fitness_{csv_title}.png")
 
     def runMain(self):
         self.init_generation()

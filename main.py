@@ -57,7 +57,7 @@ def run_30_times():
         print(f'第 {i + 1} 轮')
         nsgaObj.reset()
         nsgaObj.runMain()
-        nsgaObj.doExport(i + 1)
+        # nsgaObj.doExport(i + 1)
 
 
 def print_route():
@@ -71,7 +71,7 @@ def plot_route():
 
 
 def parse():
-    with io.open('results/result_03.csv', 'rt', newline='', encoding='utf8') as f:
+    with io.open('results/result_15h_03.csv', 'rt', newline='', encoding='utf8') as f:
         lines = f.readlines()
         all_newlines = []
         for l in lines:
@@ -83,7 +83,7 @@ def parse():
                 newline.append(re.sub(r'\(|\)|,', '', r.split('：')[1]))
             all_newlines.append(newline)
 
-        with open('results/result_type_03.csv', 'w', encoding='utf8') as csvfile:
+        with open('results/result_type_15h_03.csv', 'w', encoding='utf8') as csvfile:
             csvfile.writelines(
                 'index,type,fitness,vehicle,distance,satisfaction\n')
             for data in all_newlines:
@@ -92,7 +92,7 @@ def parse():
 
 if __name__ == '__main__':
     # main()
-    run_30_times()
+    # run_30_times()
     # print_route()
     # plot_route()
-    # parse()
+    parse()
