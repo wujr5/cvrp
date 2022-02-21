@@ -12949,6 +12949,7 @@
             0.0
         ]
     ],
+    "instance_name": "lc101",
     "max_vehicle_number": 25,
     "vehicle_capacity": 200.0
 }

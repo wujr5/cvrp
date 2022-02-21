@@ -12053,6 +12053,7 @@
             0.0
         ]
     ],
+    "instance_name": "lrc203",
     "max_vehicle_number": 25,
     "vehicle_capacity": 1000.0
 }

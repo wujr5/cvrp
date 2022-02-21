@@ -13409,6 +13409,7 @@
             0.0
         ]
     ],
+    "instance_name": "lr111",
     "max_vehicle_number": 25,
     "vehicle_capacity": 200.0
 }

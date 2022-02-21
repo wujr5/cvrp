@@ -122,6 +122,7 @@ def converttext2json_pdp():
 
         base_name = os.path.basename(text_file).split('.')[0]
         json_data = {}
+        json_data['instance_name'] = base_name
         numCustomers = 0
         with io.open(text_file, 'rt', newline='') as file_object:
             for line_count, line in enumerate(file_object, start=1):
