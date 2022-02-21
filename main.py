@@ -70,6 +70,12 @@ def plot_route():
     nsgaObj.plotRoute(route, 'RC104')
 
 
+def plot_fitness():
+    nsgaObj = nsgaAlgo(popSize=120, mutProb=0.02, numGen=1000,
+                       type=2, file="RC104", baseAl=2)
+    nsgaObj.plotFitness()
+
+
 def parse():
     with io.open('results/result_15h_03.csv', 'rt', newline='', encoding='utf8') as f:
         lines = f.readlines()
@@ -95,4 +101,5 @@ if __name__ == '__main__':
     # run_30_times()
     # print_route()
     # plot_route()
-    parse()
+    plot_fitness()
+    # parse()

@@ -669,16 +669,19 @@ class nsgaAlgo():
         plt.title(csv_title)
         plt.savefig(f"./figures/Route_{csv_title}.png")
 
-    def plotFitness(csv_file_path):
-        pd.read_csv(csv_file_path)
-        distances, generations = cleanResult(csv_file_path)
-        csv_title = csv_file_path.split("/")[-1][:-4]
+    def plotFitness(self):
+        result1 = pd.read_csv('results/result_type_15h_01.csv')
+        result2 = pd.read_csv('results/result_type_15h_02.csv')
+        result3 = pd.read_csv('results/result_type_15h_03.csv')
+
         plt.figure(figsize=(10, 10), dpi=144)
-        plt.plot(generations, distances)
+        plt.plot(result1['index'], result1['fitness'])
+        plt.plot(result2['index'], result2['fitness'])
+        plt.plot(result3['index'], result3['fitness'])
         plt.xlabel("Generations")
-        plt.ylabel("Min distance")
-        plt.title(csv_title)
-        plt.savefig(f"./figures/Fitness_{csv_title}.png")
+        plt.ylabel("Fitness")
+        plt.title('15h')
+        plt.savefig(f"./figures/generation_fitness_15h.png")
 
     def runMain(self):
         self.init_generation()
