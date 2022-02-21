@@ -3,7 +3,7 @@ import io
 import fnmatch
 from json import load, dump
 
-BASE_DIR = os.path.abspath(os.path.dirname(os.path.dirname(__file__)))
+BASE_DIR = os.path.abspath(os.path.dirname(__file__))
 
 
 def calculate_distance(customer1, customer2):
@@ -110,5 +110,85 @@ def converttext2json():
                  indent=4, separators=(',', ': '))
 
 
+def converttext2json_pdp():
+    print(f'base directory is {BASE_DIR}')
+    text_dir = os.path.join(BASE_DIR, 'data', 'pdp_100')
+    json_dir = os.path.join(BASE_DIR, 'data', 'pdp_json')
+    print(f'text_dir is {text_dir}')
+    print(f'json_dir is {json_dir}')
+
+    for text_file in map(lambda text_filename: os.path.join(text_dir, text_filename),
+                         fnmatch.filter(os.listdir(text_dir), '*.txt')):
+
+        base_name = os.path.basename(text_file).split('.')[0]
+        json_data = {}
+        numCustomers = 0
+        with io.open(text_file, 'rt', newline='') as file_object:
+            for line_count, line in enumerate(file_object, start=1):
+
+                # Instance name details, input text file name
+                if line_count == 1:
+                    values = line.strip().split()
+                    json_data['max_vehicle_number'] = int(values[0])
+                    json_data['vehicle_capacity'] = float(values[1])
+
+                # Depot details
+                elif line_count == 2:
+                    # This is depot
+                    values = line.strip().split()
+                    json_data['depart'] = {
+                        'coordinates': {
+                            'x': float(values[1]),
+                            'y': float(values[2]),
+                        },
+                        'demand': float(values[3]),
+                        'ready_time': float(values[4]),
+                        'due_time': float(values[5]),
+                        'service_time': float(values[6]),
+                        'pickup': int(values[7]),
+                        'delivery': int(values[8]),
+                    }
+
+                # Customer details
+                else:
+                    # Rest all are customers
+                    # Adding customer to number of customers
+                    numCustomers += 1
+                    values = line.strip().split()
+                    json_data[f'customer_{values[0]}'] = {
+                        'coordinates': {
+                            'x': float(values[1]),
+                            'y': float(values[2]),
+                        },
+                        'demand': float(values[3]),
+                        'ready_time': float(values[4]),
+                        'due_time': float(values[5]),
+                        'service_time': float(values[6]),
+                        'pickup': int(values[7]),
+                        'delivery': int(values[8]),
+                    }
+
+        customers = ['depart'] + \
+            [f'customer_{x}' for x in range(1, numCustomers + 1)]
+
+        # Writing the distance_matrix
+        json_data['distance_matrix'] = [[calculate_distance(json_data[customer1],
+                                                            json_data[customer2]) for customer1 in customers] for
+                                        customer2 in customers]
+
+        # Writing the number of customers details
+        json_data['Number_of_customers'] = numCustomers
+
+        # Giving filename as instance name, which is input text file name
+        json_file_name = f"{base_name}.json"
+        json_file = os.path.join(json_dir, json_file_name)
+        print(f'Write to file: {json_file}')
+
+        # Writing the json file to disk and saving it under json_customize directory
+        with io.open(json_file, 'wt', newline='') as file_object:
+            dump(json_data, file_object, sort_keys=True,
+                 indent=4, separators=(',', ': '))
+
+
 if __name__ == "__main__":
-    converttext2json()
+    converttext2json_pdp()
