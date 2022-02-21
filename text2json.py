@@ -132,30 +132,17 @@ def converttext2json_pdp():
                     json_data['max_vehicle_number'] = int(values[0])
                     json_data['vehicle_capacity'] = float(values[1])
 
-                # Depot details
-                elif line_count == 2:
-                    # This is depot
-                    values = line.strip().split()
-                    json_data['depart'] = {
-                        'coordinates': {
-                            'x': float(values[1]),
-                            'y': float(values[2]),
-                        },
-                        'demand': float(values[3]),
-                        'ready_time': float(values[4]),
-                        'due_time': float(values[5]),
-                        'service_time': float(values[6]),
-                        'pickup': int(values[7]),
-                        'delivery': int(values[8]),
-                    }
-
                 # Customer details
                 else:
-                    # Rest all are customers
-                    # Adding customer to number of customers
-                    numCustomers += 1
                     values = line.strip().split()
-                    json_data[f'customer_{values[0]}'] = {
+                    name = f'customer_{values[0]}'
+
+                    if line_count == 2:
+                        name = 'depart'
+                    else:
+                        numCustomers += 1
+
+                    json_data[name] = {
                         'coordinates': {
                             'x': float(values[1]),
                             'y': float(values[2]),
@@ -164,8 +151,8 @@ def converttext2json_pdp():
                         'ready_time': float(values[4]),
                         'due_time': float(values[5]),
                         'service_time': float(values[6]),
-                        'pickup': int(values[7]),
-                        'delivery': int(values[8]),
+                        'pickup_for': int(values[7]),
+                        'delivery_from': int(values[8]),
                     }
 
         customers = ['depart'] + \

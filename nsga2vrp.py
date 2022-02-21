@@ -580,7 +580,7 @@ class nsgaAlgo():
     # 生成 csv 文件
 
     def doExport(self, times=1):
-        csv_file_name = f"{self.json_instance['instance_name']}_result_{times}.csv"
+        csv_file_name = f"{self.json_instance['instance_name']}_result_{'base' if self.base == 1 else 'opt'}_{times}.csv"
         csv_columns = self.logbook[0].keys()
         csv_path = os.path.join(BASE_DIR, "results", csv_file_name)
 

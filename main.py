@@ -45,8 +45,8 @@ def run_30_times():
                         help="Mutation Probabilty")
     parser.add_argument('--file', type=str, default='C101', required=False,
                         help="算例")
-    parser.add_argument('--base', type=int, default=1, required=False,
-                        help="算法：1 基础，2 优化")
+    parser.add_argument('--base', type=int, default=2, required=False,
+                        help="交叉算法：1 基础，2 优化")
 
     args = parser.parse_args()
 
@@ -57,7 +57,7 @@ def run_30_times():
         print(f'第 {i + 1} 轮')
         nsgaObj.reset()
         nsgaObj.runMain()
-        # nsgaObj.doExport(i + 1)
+        nsgaObj.doExport(i + 1)
 
 
 def print_route():
