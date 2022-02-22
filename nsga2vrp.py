@@ -20,7 +20,8 @@ class nsgaAlgo():
         self.file = file
         self.base = baseAl
         self.json_instance = self.load_instance(
-            f'./data/json/{self.file}.json')
+            f'./data/pdp_json/{self.file}.json')
+
         self.speed = self.load_speed('./data/speed.csv')
         self.ind_size = self.json_instance['Number_of_customers']
         self.pop_size = popSize
@@ -33,7 +34,8 @@ class nsgaAlgo():
         self.B = 1 - self.A  # 其余则为B类，A + B = 1
 
         # 车辆出发原点时间，0，表示 6:00，1 单位时间是 1 分钟
-        self.original_time = (15 - 6) * 60  # 设置为下午 13:00 出发
+        self.start_time = 11
+        self.original_time = (self.start_time - 6) * 60  # 设置为下午 13:00 出发
 
         self.logbook = tools.Logbook()
         self.logbook.header = "generation", "fitness"
@@ -46,6 +48,7 @@ class nsgaAlgo():
 
     # 加载 json 文件
     def load_instance(self, json_file):
+        print(json_file)
         if os.path.exists(path=json_file):
             with io.open(json_file, 'rt', newline='') as file_object:
                 return load(file_object)
@@ -580,7 +583,7 @@ class nsgaAlgo():
     # 生成 csv 文件
 
     def doExport(self, times=1):
-        csv_file_name = f"{self.json_instance['instance_name']}_result_{'base' if self.base == 1 else 'opt'}_{times}.csv"
+        csv_file_name = f"{self.json_instance['instance_name']}_result_{'base' if self.base == 1 else 'opt'}_{self.start_time}_{times}.csv"
         csv_columns = self.logbook[0].keys()
         csv_path = os.path.join(BASE_DIR, "results", csv_file_name)
 
