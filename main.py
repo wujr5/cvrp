@@ -17,7 +17,7 @@ def main():
                         help="Enter the population size")
     parser.add_argument('--pb', type=float, default=0.02, required=False,
                         help="Mutation Probabilty")
-    parser.add_argument('--numGen', type=int, default=1000, required=False,
+    parser.add_argument('--numGen', type=int, default=800, required=False,
                         help="Number of generations to run")
     parser.add_argument('--file', type=str, default='RC104', required=False,
                         help="算例")
@@ -25,11 +25,13 @@ def main():
                         help="初始化类型，1 随机，2 指定方向")
     parser.add_argument('--base', type=int, default=2, required=False,
                         help="交叉算法：1 基础，2 优化")
+    parser.add_argument('--time', type=int, default=12, required=False,
+                        help="开始时间")
 
     args = parser.parse_args()
 
     nsgaObj = nsgaAlgo(popSize=120, mutProb=args.pb,
-                       numGen=1000, type=args.type, file=args.file, baseAl=args.base)
+                       numGen=800, type=args.type, file=args.file, baseAl=args.base, time=args.time)
 
     typeObj = {1: '随机', 2: '定向'}
     print(
@@ -52,11 +54,13 @@ def run_30_times():
                         help="算例")
     parser.add_argument('--base', type=int, default=2, required=False,
                         help="交叉算法：1 基础，2 优化")
+    parser.add_argument('--time', type=int, default=12, required=False,
+                        help="开始时间")
 
     args = parser.parse_args()
 
     nsgaObj = nsgaAlgo(popSize=120, mutProb=args.pb,
-                       numGen=1000, type=args.type, file=args.file, baseAl=args.base)
+                       numGen=1000, type=args.type, file=args.file, baseAl=args.base, time=args.time)
 
     for i in range(30):
         print(f'第 {i + 1} 轮')
@@ -102,8 +106,8 @@ def parse():
 
 
 if __name__ == '__main__':
-    main()
-    # run_30_times()
+    # main()
+    run_30_times()
     # print_route()
     # plot_route()
     # plot_fitness()

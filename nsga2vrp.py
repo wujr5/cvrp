@@ -16,7 +16,7 @@ BASE_DIR = os.path.abspath(os.path.dirname(__file__))
 
 class nsgaAlgo():
 
-    def __init__(self, popSize, mutProb, numGen, type, file, baseAl=2):
+    def __init__(self, popSize, mutProb, numGen, type, file, baseAl=2, time=12):
         self.file = file
         self.base = baseAl
         self.json_instance = self.load_instance(
@@ -24,11 +24,6 @@ class nsgaAlgo():
 
         self.speed = self.load_speed('./data/speed.csv')
         self.ind_size = self.json_instance['Number_of_customers']
-
-        length = len(self.json_instance['distance_matrix'][0])
-        for i in range(length):
-            for j in range(length):
-                self.json_instance['distance_matrix'][i][j] *= 2
 
         self.pop_size = popSize
         self.mut_prob = mutProb
@@ -40,7 +35,7 @@ class nsgaAlgo():
         self.B = 1 - self.A  # 其余则为B类，A + B = 1
 
         # 车辆出发原点时间，0，表示 6:00，1 单位时间是 1 分钟
-        self.start_time = 11
+        self.start_time = time
         self.original_time = (self.start_time - 6) * 60  # 设置为下午 13:00 出发
 
         self.logbook = tools.Logbook()
@@ -225,7 +220,7 @@ class nsgaAlgo():
             self.best_individual = tools.selBest(self.pop, 1)[0]
 
             print(
-                f'迭代：{gen + 1}，类型：{type_config[self.type]}，适应值：{self.best_individual.fitness.values}，车辆：{self.getVehicleNum(self.best_individual)}，距离：{self.getDistance(self.best_individual)}，满意度：{self.getSatisfaction(self.best_individual, True)}')
+                f'迭代：{gen + 1}，时间：{self.start_time}，类型：{type_config[self.type]}，适应值：{self.best_individual.fitness.values}，车辆：{self.getVehicleNum(self.best_individual)}，距离：{self.getDistance(self.best_individual)}，满意度：{self.getSatisfaction(self.best_individual, True)}')
 
             # 生成日志
             self.logbook.record(
@@ -597,7 +592,7 @@ class nsgaAlgo():
         # 满意度
         satisfaction = self.getSatisfaction(individual)
 
-        return round(vehicles * 20 + total_distance * 2 + (100 - satisfaction) * 10, 4),
+        return round(vehicles * 200 + total_distance * 100 + (100 - satisfaction) * 10, 2),
 
     # 生成 csv 文件
 

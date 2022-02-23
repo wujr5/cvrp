@@ -27,7 +27,7 @@
         },
         "demand": 40.0,
         "due_time": 20.0,
-        "ready_time": 0.0,
+        "ready_time": 10.0,
         "service_time": 3.0
     },
     "customer_12": {
@@ -37,7 +37,7 @@
         },
         "demand": 40.0,
         "due_time": 20.0,
-        "ready_time": 0.0,
+        "ready_time": 10.0,
         "service_time": 3.0
     },
     "customer_13": {
@@ -47,7 +47,7 @@
         },
         "demand": 20.0,
         "due_time": 20.0,
-        "ready_time": 0.0,
+        "ready_time": 10.0,
         "service_time": 3.0
     },
     "customer_14": {
@@ -57,7 +57,7 @@
         },
         "demand": 22.0,
         "due_time": 20.0,
-        "ready_time": 0.0,
+        "ready_time": 10.0,
         "service_time": 3.0
     },
     "customer_15": {
@@ -67,7 +67,7 @@
         },
         "demand": 20.0,
         "due_time": 20.0,
-        "ready_time": 0.0,
+        "ready_time": 10.0,
         "service_time": 3.0
     },
     "customer_16": {
@@ -77,7 +77,7 @@
         },
         "demand": 20.0,
         "due_time": 30.0,
-        "ready_time": 0.0,
+        "ready_time": 20.0,
         "service_time": 3.0
     },
     "customer_17": {
@@ -87,7 +87,7 @@
         },
         "demand": 10.0,
         "due_time": 30.0,
-        "ready_time": 0.0,
+        "ready_time": 20.0,
         "service_time": 3.0
     },
     "customer_18": {
@@ -97,7 +97,7 @@
         },
         "demand": 21.0,
         "due_time": 30.0,
-        "ready_time": 0.0,
+        "ready_time": 20.0,
         "service_time": 3.0
     },
     "customer_19": {
@@ -107,7 +107,7 @@
         },
         "demand": 20.0,
         "due_time": 30.0,
-        "ready_time": 0.0,
+        "ready_time": 20.0,
         "service_time": 3.0
     },
     "customer_2": {
@@ -127,7 +127,7 @@
         },
         "demand": 43.0,
         "due_time": 30.0,
-        "ready_time": 0.0,
+        "ready_time": 20.0,
         "service_time": 3.0
     },
     "customer_21": {
@@ -147,7 +147,7 @@
         },
         "demand": 40.0,
         "due_time": 30.0,
-        "ready_time": 10.0,
+        "ready_time": 20.0,
         "service_time": 3.0
     },
     "customer_23": {
@@ -157,7 +157,7 @@
         },
         "demand": 10.0,
         "due_time": 30.0,
-        "ready_time": 10.0,
+        "ready_time": 20.0,
         "service_time": 3.0
     },
     "customer_24": {
@@ -167,7 +167,7 @@
         },
         "demand": 10.0,
         "due_time": 30.0,
-        "ready_time": 10.0,
+        "ready_time": 20.0,
         "service_time": 3.0
     },
     "customer_25": {
@@ -177,7 +177,7 @@
         },
         "demand": 26.0,
         "due_time": 30.0,
-        "ready_time": 10.0,
+        "ready_time": 20.0,
         "service_time": 3.0
     },
     "customer_26": {
@@ -187,7 +187,7 @@
         },
         "demand": 10.0,
         "due_time": 50.0,
-        "ready_time": 20.0,
+        "ready_time": 40.0,
         "service_time": 3.0
     },
     "customer_27": {
@@ -197,7 +197,7 @@
         },
         "demand": 25.0,
         "due_time": 50.0,
-        "ready_time": 20.0,
+        "ready_time": 40.0,
         "service_time": 3.0
     },
     "customer_28": {
@@ -207,7 +207,7 @@
         },
         "demand": 20.0,
         "due_time": 50.0,
-        "ready_time": 20.0,
+        "ready_time": 40.0,
         "service_time": 3.0
     },
     "customer_29": {
@@ -217,7 +217,7 @@
         },
         "demand": 41.0,
         "due_time": 50.0,
-        "ready_time": 20.0,
+        "ready_time": 40.0,
         "service_time": 3.0
     },
     "customer_3": {
@@ -237,7 +237,7 @@
         },
         "demand": 20.0,
         "due_time": 50.0,
-        "ready_time": 20.0,
+        "ready_time": 40.0,
         "service_time": 3.0
     },
     "customer_4": {
