@@ -20,10 +20,16 @@ class nsgaAlgo():
         self.file = file
         self.base = baseAl
         self.json_instance = self.load_instance(
-            f'./data/pdp_json/{self.file}.json')
+            f'./data/json/{self.file}.json')
 
         self.speed = self.load_speed('./data/speed.csv')
         self.ind_size = self.json_instance['Number_of_customers']
+
+        length = len(self.json_instance['distance_matrix'][0])
+        for i in range(length):
+            for j in range(length):
+                self.json_instance['distance_matrix'][i][j] *= 2
+
         self.pop_size = popSize
         self.mut_prob = mutProb
         self.num_gen = numGen
@@ -48,7 +54,6 @@ class nsgaAlgo():
 
     # 加载 json 文件
     def load_instance(self, json_file):
-        print(json_file)
         if os.path.exists(path=json_file):
             with io.open(json_file, 'rt', newline='') as file_object:
                 return load(file_object)
@@ -166,6 +171,8 @@ class nsgaAlgo():
                 customers.remove(distance_arr[i]['c'])
                 sub_capacity += distance_arr[i]['d']
                 i = i + 1
+
+        # self.rationalize(result)
 
         return result
 
@@ -387,6 +394,18 @@ class nsgaAlgo():
 
         return creator.Individual(list(ind))
 
+    def rationalize(self, ind):
+        rtnl_ind = deepcopy(ind)
+
+        print(rtnl_ind)
+
+        for i in rtnl_ind:
+            print(i, self.json_instance[f'customer_{i}'])
+
+        exit()
+
+        return creator.Individual(list(rtnl_ind))
+
     # 根据输入的速度数据获取消耗的时间
     def getTimeCostByInputSpeed(self, startTime, distance):
         # 加上出发时间
@@ -405,8 +424,8 @@ class nsgaAlgo():
 
     # 满意度函数
     def getSatisfaction(self, individual, debug=False):
-        left_edge = 30  # 可容忍早到时间
-        right_edge = 30  # 可容忍迟到时间
+        left_edge = 10  # 可容忍早到时间
+        right_edge = 10  # 可容忍迟到时间
 
         all_sub_route = self.routeToSubroute(individual)
         A_Customer = []
@@ -485,7 +504,7 @@ class nsgaAlgo():
 
         last_customer_id = 0
         time_cost = 0
-        time_gap = 50
+        time_gap = 10
 
         for customer_id in individual:
             distance = self.json_instance["distance_matrix"][last_customer_id][customer_id]
@@ -578,7 +597,7 @@ class nsgaAlgo():
         # 满意度
         satisfaction = self.getSatisfaction(individual)
 
-        return round(vehicles * 20 + total_distance * 2 + (100 - satisfaction) * 200, 4),
+        return round(vehicles * 20 + total_distance * 2 + (100 - satisfaction) * 10, 4),
 
     # 生成 csv 文件
 
