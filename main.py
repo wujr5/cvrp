@@ -17,9 +17,9 @@ def main():
                         help="Enter the population size")
     parser.add_argument('--pb', type=float, default=0.02, required=False,
                         help="Mutation Probabilty")
-    parser.add_argument('--numGen', type=int, default=800, required=False,
+    parser.add_argument('--gen', type=int, default=800, required=False,
                         help="Number of generations to run")
-    parser.add_argument('--file', type=str, default='RC104', required=False,
+    parser.add_argument('--file', type=str, default='lrc104', required=False,
                         help="算例")
     parser.add_argument('--type', type=int, default=2, required=False,
                         help="初始化类型，1 随机，2 指定方向")
@@ -31,7 +31,7 @@ def main():
     args = parser.parse_args()
 
     nsgaObj = nsgaAlgo(popSize=120, mutProb=args.pb,
-                       numGen=800, type=args.type, file=args.file, baseAl=args.base, time=args.time)
+                       numGen=args.gen, type=args.type, file=args.file, baseAl=args.base, time=args.time)
 
     typeObj = {1: '随机', 2: '定向'}
     print(
@@ -60,7 +60,7 @@ def run_30_times():
     args = parser.parse_args()
 
     nsgaObj = nsgaAlgo(popSize=120, mutProb=args.pb,
-                       numGen=1000, type=args.type, file=args.file, baseAl=args.base, time=args.time)
+                       numGen=800, type=args.type, file=args.file, baseAl=args.base, time=args.time)
 
     for i in range(30):
         print(f'第 {i + 1} 轮')

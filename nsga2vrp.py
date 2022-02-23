@@ -167,8 +167,6 @@ class nsgaAlgo():
                 sub_capacity += distance_arr[i]['d']
                 i = i + 1
 
-        # self.rationalize(result)
-
         return result
 
     # 初始化适应值
@@ -220,13 +218,15 @@ class nsgaAlgo():
             self.best_individual = tools.selBest(self.pop, 1)[0]
 
             print(
-                f'迭代：{gen + 1}，时间：{self.start_time}，类型：{type_config[self.type]}，适应值：{self.best_individual.fitness.values}，车辆：{self.getVehicleNum(self.best_individual)}，距离：{self.getDistance(self.best_individual)}，满意度：{self.getSatisfaction(self.best_individual, True)}')
+                f'迭代：{gen + 1}，时间：{self.start_time}，类型：{type_config[self.type]}，适应值：{self.best_individual.fitness.values}，车辆：{self.getVehicleNum(self.best_individual)}，距离：{self.getDistance(self.best_individual)}，满意度：{self.getSatisfaction(self.best_individual, True)[0]}')
 
             # 生成日志
             self.logbook.record(
                 generation=gen + 1, fitness=f'{self.best_individual.fitness.values}')
-        # print(
-        #     f'变异：{self.mut_prob}，类型：{type_config[self.type]}，车辆：{self.best_individual.fitness.values[0]}，距离：{self.best_individual.fitness.values[1]}')
+
+        print(f'最好路径：{self.best_individual}')
+
+        self.printRoute(self.best_individual)
 
     def getDistance(self, ind):
         all_sub_route = self.routeToSubroute(ind)
@@ -249,7 +249,7 @@ class nsgaAlgo():
             # 乘以单位成本，加上早到和迟到惩罚成本
             all_distance += sub_route_distance
 
-        return round(all_distance, 3)
+        return round(all_distance, 1)
 
     # 2-opt 算法
     def operate2opt(self, ind):
@@ -394,8 +394,8 @@ class nsgaAlgo():
 
         print(rtnl_ind)
 
-        for i in rtnl_ind:
-            print(i, self.json_instance[f'customer_{i}'])
+        while len(rtnl_ind) > 0:
+            print(rtnl_ind[0], self.json_instance[f'customer_{i}'])
 
         exit()
 
@@ -421,6 +421,9 @@ class nsgaAlgo():
     def getSatisfaction(self, individual, debug=False):
         left_edge = 10  # 可容忍早到时间
         right_edge = 10  # 可容忍迟到时间
+
+        # 路径时间
+        time_of_route = []
 
         all_sub_route = self.routeToSubroute(individual)
         A_Customer = []
@@ -468,6 +471,12 @@ class nsgaAlgo():
 
                 last_customer_id = customer_id
 
+            # 回到送货点耗时
+            sub_time_cost = sub_time_cost + self.getTimeCostByInputSpeed(
+                sub_time_cost, self.json_instance["distance_matrix"][last_customer_id][0])
+
+            time_of_route.append(sub_time_cost)
+
         # 加权计算平均满意度
         A_Satisfaction = 0
         B_Satisfaction = 0
@@ -487,10 +496,13 @@ class nsgaAlgo():
         # if debug:
         #     print(rate_a, rate_b, A_Satisfaction, B_Satisfaction)
 
-        return round(A_Satisfaction * self.A * rate_a + B_Satisfaction * self.B * rate_b, 2)
+        return round(A_Satisfaction * self.A * rate_a + B_Satisfaction * self.B * rate_b, 2), time_of_route
 
     # 返回带子路径的二维数组
     def routeToSubroute(self, individual):
+
+        # self.rationalize(individual)
+
         route = []
         sub_route = []
         vehicle_load = 0
@@ -531,7 +543,11 @@ class nsgaAlgo():
     def printRoute(self, route, merge=False):
         route_str = '0'
         sub_route_count = 0
-        for sub_route in route:
+
+        time_of_route = self.getSatisfaction(route)[1]
+        index = 0
+
+        for sub_route in self.routeToSubroute(route):
             sub_route_count += 1
             sub_route_str = '0'
             for customer_id in sub_route:
@@ -539,7 +555,9 @@ class nsgaAlgo():
                 route_str = f'{route_str} - {customer_id}'
             sub_route_str = f'{sub_route_str} - 0'
             if not merge:
-                print(f'  Vehicle {sub_route_count}\'s route: {sub_route_str}')
+                print(
+                    f'Vehicle {sub_route_count}\'s route: {sub_route_str}，时间：{time_of_route[index]}')
+                index += 1
             route_str = f'{route_str} - 0'
         if merge:
             print(route_str)
@@ -590,9 +608,9 @@ class nsgaAlgo():
         total_distance = self.getRouteCost(individual)
 
         # 满意度
-        satisfaction = self.getSatisfaction(individual)
+        satisfaction = self.getSatisfaction(individual)[0]
 
-        return round(vehicles * 200 + total_distance * 100 + (100 - satisfaction) * 10, 2),
+        return round(vehicles * 50 + total_distance * 100 + (100 - satisfaction) * 100, 2),
 
     # 生成 csv 文件
 
