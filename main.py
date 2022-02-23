@@ -102,8 +102,8 @@ def parse():
 
 
 if __name__ == '__main__':
-    # main()
-    run_30_times()
+    main()
+    # run_30_times()
     # print_route()
     # plot_route()
     # plot_fitness()
