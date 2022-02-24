@@ -4,8 +4,11 @@ import io
 import re
 import csv
 
-route = [2, 4, 45, 5, 7, 78, 69, 65, 54, 68, 70, 10, 47, 17, 16, 15, 11, 90, 14, 86, 64, 82, 39, 53, 9, 87, 98, 88, 13, 12, 60, 100, 96, 95, 91, 92, 80, 72, 81, 76, 66, 99, 52, 84, 55, 34, 31, 29, 27,
-         26, 28, 30, 32, 50, 62, 67, 71, 33, 59, 24, 75, 18, 63, 57, 97, 74, 58, 77, 25, 51, 89, 19, 49, 20, 22, 48, 21, 23, 56, 85, 94, 93, 41, 40, 43, 44, 42, 35, 37, 38, 83, 61, 3, 1, 36, 73, 79, 8, 46, 6]
+route1 = [5, 9, 13, 12, 11, 23, 17, 14, 21, 18, 25, 1, 4,
+          15, 27, 8, 19, 30, 16, 6, 29, 22, 24, 26, 10, 28, 2, 3, 20, 7]
+
+route2 = [18, 20, 7, 5, 9, 13, 12, 16, 24, 22, 1, 23, 17,
+          14, 21, 30, 28, 25, 11, 4, 15, 27, 8, 19, 29, 6, 26, 10, 2, 3]
 
 
 def main():
@@ -19,7 +22,7 @@ def main():
                         help="Mutation Probabilty")
     parser.add_argument('--gen', type=int, default=800, required=False,
                         help="Number of generations to run")
-    parser.add_argument('--file', type=str, default='lrc104', required=False,
+    parser.add_argument('--file', type=str, default='a101', required=False,
                         help="算例")
     parser.add_argument('--type', type=int, default=2, required=False,
                         help="初始化类型，1 随机，2 指定方向")
@@ -35,9 +38,13 @@ def main():
 
     typeObj = {1: '随机', 2: '定向'}
     print(
-        f'种群大小：{args.popSize}，变异率：{args.pb}，初始化类型：{typeObj[args.type]}，迭代数：{args.numGen}')
+        f'种群大小：{args.popSize}，变异率：{args.pb}，初始化类型：{typeObj[args.type]}，迭代数：{args.gen}')
 
-    nsgaObj.runMain()
+    # nsgaObj.runMain()
+    nsgaObj.printRoute([5, 9, 13, 12, 11, 23, 17, 14, 21, 18, 25, 1, 4,
+                       15, 27, 8, 19, 30, 16, 6, 29, 22, 24, 26, 10, 28, 2, 3, 20, 7])
+    nsgaObj.printRoute([18, 20, 7, 5, 9, 13, 12, 16, 24, 22, 1, 23, 17,
+                       14, 21, 30, 28, 25, 11, 4, 15, 27, 8, 19, 29, 6, 26, 10, 2, 3])
 
 
 def run_30_times():
@@ -56,11 +63,13 @@ def run_30_times():
                         help="交叉算法：1 基础，2 优化")
     parser.add_argument('--time', type=int, default=12, required=False,
                         help="开始时间")
+    parser.add_argument('--gen', type=int, default=800, required=False,
+                        help="Number of generations to run")
 
     args = parser.parse_args()
 
     nsgaObj = nsgaAlgo(popSize=120, mutProb=args.pb,
-                       numGen=800, type=args.type, file=args.file, baseAl=args.base, time=args.time)
+                       numGen=args.gen, type=args.type, file=args.file, baseAl=args.base, time=args.time)
 
     for i in range(30):
         print(f'第 {i + 1} 轮')
@@ -70,13 +79,15 @@ def run_30_times():
 
 
 def print_route():
-    nsgaObj = nsgaAlgo(popSize=120, mutProb=0.02, numGen=1000, type=2)
-    nsgaObj.printRoute(nsgaObj.routeToSubroute(route))
+    nsgaObj = nsgaAlgo(popSize=120, mutProb=0.02, numGen=1000,
+                       type=2, file='a101', baseAl=2, time=12)
+    nsgaObj.printRoute(route1)
 
 
 def plot_route():
-    nsgaObj = nsgaAlgo(popSize=120, mutProb=0.02, numGen=1000, type=2)
-    nsgaObj.plotRoute(route, 'RC104')
+    nsgaObj = nsgaAlgo(popSize=120, mutProb=0.02, numGen=1000,
+                       type=2, file='a101', baseAl=2, time=12)
+    nsgaObj.plotRoute(route2, 'a101_18h')
 
 
 def plot_fitness():
@@ -107,8 +118,8 @@ def parse():
 
 if __name__ == '__main__':
     # main()
-    run_30_times()
+    # run_30_times()
     # print_route()
-    # plot_route()
+    plot_route()
     # plot_fitness()
     # parse()

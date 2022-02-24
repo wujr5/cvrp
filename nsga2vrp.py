@@ -420,7 +420,7 @@ class nsgaAlgo():
     # 满意度函数
     def getSatisfaction(self, individual, debug=False):
         left_edge = 10  # 可容忍早到时间
-        right_edge = 10  # 可容忍迟到时间
+        right_edge = 15  # 可容忍迟到时间
 
         # 路径时间
         time_of_route = []
@@ -511,7 +511,7 @@ class nsgaAlgo():
 
         last_customer_id = 0
         time_cost = 0
-        time_gap = 10
+        time_gap = 0
 
         for customer_id in individual:
             distance = self.json_instance["distance_matrix"][last_customer_id][customer_id]
