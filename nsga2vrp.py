@@ -31,7 +31,7 @@ class nsgaAlgo():
         self.type = type
         self.toolbox = base.Toolbox()
 
-        self.A = 0.5  # 顾客时间窗左端（即 ready time）=0
+        self.A = 0.8  # 顾客时间窗左端（即 ready time）=0
         self.B = 1 - self.A  # 其余则为B类，A + B = 1
 
         # 车辆出发原点时间，0，表示 6:00，1 单位时间是 1 分钟
@@ -389,18 +389,6 @@ class nsgaAlgo():
 
         return creator.Individual(list(ind))
 
-    def rationalize(self, ind):
-        rtnl_ind = deepcopy(ind)
-
-        print(rtnl_ind)
-
-        while len(rtnl_ind) > 0:
-            print(rtnl_ind[0], self.json_instance[f'customer_{i}'])
-
-        exit()
-
-        return creator.Individual(list(rtnl_ind))
-
     # 根据输入的速度数据获取消耗的时间
     def getTimeCostByInputSpeed(self, startTime, distance):
         # 加上出发时间
@@ -498,10 +486,112 @@ class nsgaAlgo():
 
         return round(A_Satisfaction * self.A * rate_a + B_Satisfaction * self.B * rate_b, 2), time_of_route
 
+    # 取送一体问题的路径生成算法
+    def routeToSubroutePDP(self, ind):
+        # ind = [37, 36, 35, 38, 39, 40, 41, 44, 42, 43, 72, 54, 61, 71, 81, 96, 10, 11, 9, 12, 13, 14, 15, 47, 16, 17, 53, 78, 87, 99, 82, 52, 5, 3, 45, 1, 4, 105, 46, 8, 2, 6, 7, 100, 70, 79, 60, 58, 77, 59, 74, 75, 97, 86,
+        #        25, 101, 57, 23, 24, 21, 95, 56, 92, 84, 91, 62, 67, 94, 64, 103, 80, 66, 85, 102, 93, 50, 51, 63, 18, 48, 19, 49, 20, 22, 76, 104, 89, 83, 65, 90, 29, 31, 27, 34, 28, 30, 32, 26, 33, 68, 69, 73, 106, 88, 98, 55]
+
+        # 升序排列
+        def cmp(a, b):
+            return a['i'] - b['i']
+
+        rtnl_ind = deepcopy(ind)
+
+        # print(rtnl_ind)
+
+        # for i in rtnl_ind:
+        #     print(i, self.json_instance[f'customer_{i}'])
+
+        max_load = self.json_instance['vehicle_capacity']
+        speed = 1
+
+        sub_route = []
+        sub_route_load = 0
+        sub_route_time_cost = 0
+        last_customer_id = 0
+        route = []
+
+        k = 0
+        while len(rtnl_ind) > 0:
+            customer = rtnl_ind[0]
+            demand = self.json_instance[f'customer_{customer}']['demand']
+            delivery_from = self.json_instance[f'customer_{customer}']['delivery_from']
+            pickup_for = self.json_instance[f'customer_{customer}']['pickup_for']
+            due_time = self.json_instance[f'customer_{customer}']['due_time']
+            service_time = self.json_instance[f'customer_{customer}']['service_time']
+            distance = self.json_instance['distance_matrix'][last_customer_id][customer]
+
+            # 还没取货，送货点放到最后
+            if demand > 0 and delivery_from not in sub_route:
+                rtnl_ind.insert(len(rtnl_ind), customer)
+                del rtnl_ind[0]
+                # print('大于0：', customer,
+                #       self.json_instance[f'customer_{customer}'])
+            # 已取货，送货点加入路径
+            elif demand > 0 and delivery_from in sub_route:
+                sub_route.append(customer)
+                sub_route_load += demand
+                sub_route_time_cost += distance / speed
+                sub_route_time_cost += service_time
+                last_customer_id = customer
+                rtnl_ind.remove(customer)
+                # print('移除1：', customer,
+                #       self.json_instance[f'customer_{customer}'])
+            # 满足取货条件，取货点加入路径
+            elif demand < 0 and (sub_route_load + abs(demand)) < max_load and (sub_route_time_cost + distance / speed) <= due_time:
+                sub_route.append(customer)
+                sub_route_load += demand
+                sub_route_time_cost += distance / speed
+                sub_route_time_cost += service_time
+                last_customer_id = customer
+                rtnl_ind.remove(customer)
+                # print('移除2：', customer,
+                #       self.json_instance[f'customer_{customer}'])
+            # 路径完成，计算新路径
+            else:
+                # 缺失的送货点
+                missing_customer = []
+
+                for i in sub_route:
+                    c = self.json_instance[f'customer_{i}']
+                    if c['demand'] < 0 and c['pickup_for'] not in sub_route:
+                        missing_customer.append({
+                            'c': c['pickup_for'],
+                            'i': rtnl_ind.index(c['pickup_for'])
+                        })
+
+                missing_customer.sort(key=cmp_to_key(cmp))
+
+                # print('缺失的客户点：', missing_customer)
+
+                sub_route += map(lambda a: a['c'], missing_customer)
+
+                # 移除客户点
+                for i in missing_customer:
+                    rtnl_ind.remove(i['c'])
+
+                route.append(sub_route)
+                sub_route = []
+                sub_route_load = 0
+                last_customer_id = 0
+                sub_route_time_cost = 0
+                # print('加入路径：', route)
+                # print(customer,
+                #       self.json_instance[f'customer_{customer}'])
+
+        #     k += 1
+        #     if k > 1000:
+        #         exit()
+
+        # print('匹配完成', k, route)
+
+        # exit()
+
+        return route
+
     # 返回带子路径的二维数组
     def routeToSubroute(self, individual):
-
-        # self.rationalize(individual)
+        return self.routeToSubroutePDP(individual)
 
         route = []
         sub_route = []
@@ -705,20 +795,19 @@ class nsgaAlgo():
         plt.savefig(f"./figures/Route_{csv_title}.png")
 
     def plotFitness(self):
-        result1 = pd.read_csv('results/result_type_7h_01.csv')
-        # result2 = pd.read_csv('results/result_type_7h_02.csv')
-        result3 = pd.read_csv('results/result_type_7h_03.csv')
+        result1 = pd.read_csv('results/a101_result_base_18_1.csv')
+        result2 = pd.read_csv('results/a101_result_base_18_2.csv')
 
         plt.figure(figsize=(10, 10), dpi=144)
         plt.plot(result1['index'], result1['fitness'])
-        # plt.plot(result2['index'], result2['fitness'])
-        plt.plot(result3['index'], result3['fitness'])
+        plt.plot(result2['index'], result2['fitness'])
         plt.xlabel("Generations")
         plt.ylabel("Fitness")
+        plt.legend(['GA', 'IGA'], loc=0, ncol=2)
         # plt.title('7h')
-        plt.xlim(0, 800)
-        plt.ylim(4000, 18000)
-        plt.savefig(f"./figures/generation_fitness_7h.png")
+        plt.xlim(0, 500)
+        plt.ylim(7000, 18000)
+        plt.savefig(f"./figures/generation_fitness_18h.png")
 
     def runMain(self):
         self.init_generation()

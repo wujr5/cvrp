@@ -22,7 +22,7 @@ def main():
                         help="Mutation Probabilty")
     parser.add_argument('--gen', type=int, default=800, required=False,
                         help="Number of generations to run")
-    parser.add_argument('--file', type=str, default='a101', required=False,
+    parser.add_argument('--file', type=str, default='lrc104', required=False,
                         help="算例")
     parser.add_argument('--type', type=int, default=2, required=False,
                         help="初始化类型，1 随机，2 指定方向")
@@ -40,11 +40,7 @@ def main():
     print(
         f'种群大小：{args.popSize}，变异率：{args.pb}，初始化类型：{typeObj[args.type]}，迭代数：{args.gen}')
 
-    # nsgaObj.runMain()
-    nsgaObj.printRoute([5, 9, 13, 12, 11, 23, 17, 14, 21, 18, 25, 1, 4,
-                       15, 27, 8, 19, 30, 16, 6, 29, 22, 24, 26, 10, 28, 2, 3, 20, 7])
-    nsgaObj.printRoute([18, 20, 7, 5, 9, 13, 12, 16, 24, 22, 1, 23, 17,
-                       14, 21, 30, 28, 25, 11, 4, 15, 27, 8, 19, 29, 6, 26, 10, 2, 3])
+    nsgaObj.runMain()
 
 
 def run_30_times():
@@ -91,8 +87,8 @@ def plot_route():
 
 
 def plot_fitness():
-    nsgaObj = nsgaAlgo(popSize=120, mutProb=0.02, numGen=1000,
-                       type=2, file="RC104", baseAl=2)
+    nsgaObj = nsgaAlgo(popSize=120, mutProb=0.02, numGen=500,
+                       type=2, file='a101', baseAl=2, time=12)
     nsgaObj.plotFitness()
 
 
@@ -117,9 +113,9 @@ def parse():
 
 
 if __name__ == '__main__':
-    # main()
+    main()
     # run_30_times()
     # print_route()
-    plot_route()
+    # plot_route()
     # plot_fitness()
     # parse()
