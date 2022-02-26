@@ -208,10 +208,12 @@ class nsgaAlgo():
                     new4 = self.toolbox.mutate(new2)
                     self.offsprings += [new3, new4]
 
+                    # 算子操作
+                    new5 = self.opt_pdp(new3, gen)
+                    new6 = self.opt_pdp(new4, gen)
+                    self.offsprings += [new5, new6]
+
             for i in range(len(self.offsprings)):
-                # 2-opt操作
-                # if self.type != 1:
-                # self.offsprings[i] = self.operate2opt(self.offsprings[i])
                 # 重新计算适应值
                 self.offsprings[i].fitness.values = self.toolbox.evaluate(
                     self.offsprings[i])
@@ -496,21 +498,180 @@ class nsgaAlgo():
         # 单个算子当前的最多迭代次数
         sn = 1 + floor(50 * (gen / self.num_gen))
         # 包含所有路径的数组
-        routes = self.routeToSubroutePDP(ind)
+        ind_new = deepcopy(ind)
 
-        return ind
+        count_all = 0  # 所有次数
+        count_1 = 0  # relocate 的次数
+        count_2 = 0  # insert 的次数
+        count_3 = 0  # swap 的次数
+
+        k = 0
+
+        while count_all < self.opt_stop_num:
+            while count_1 < sn:
+                temp = self.opt_relocate(ind_new)
+                if self.evaluate(temp)[0] < self.evaluate(ind_new)[0]:
+                    ind_new = temp
+                    count_1 = 0
+                    count_all = 0
+                else:
+                    count_1 += 1
+
+                k += 1
+
+            count_all += count_1
+
+            while count_2 < sn:
+                temp = self.opt_insert(ind_new)
+                if self.evaluate(temp)[0] < self.evaluate(ind_new)[0]:
+                    ind_new = temp
+                    count_all = 0
+                    count_2 = 0
+                else:
+                    count_2 += 1
+
+                k += 1
+
+            count_all += count_2
+
+            while count_3 < sn:
+                temp = self.opt_swap(ind_new)
+                if self.evaluate(temp)[0] < self.evaluate(ind_new)[0]:
+                    ind_new = temp
+                    count_all = 0
+                    count_3 = 0
+                else:
+                    count_3 += 1
+
+                k += 1
+
+            count_all += count_3
+
+            k += 1
+
+        # print('算子操作次数：', k)
+
+        return creator.Individual(ind_new)
 
     # 随机取两个路径，从其中一个路径中取出一对订单的客户点，随机插入到另一个路径中
-    def opt_relocate(self, route):
-        return route
+    def opt_relocate(self, ind):
+        routes = self.routeToSubroutePDP(ind)
+        # 挑选路径 a，b
+        [a, b] = random.sample(range(len(routes)), 2)
+
+        # print(routes[a], routes[b])
+
+        # 从 a 路径取出客户点
+        customer_1 = routes[a][random.randint(0, len(routes[a]) - 1)]
+        customer_1_demand = self.json_instance[f'customer_{customer_1}']['demand']
+        customer_2 = self.json_instance[f'customer_{customer_1}'][
+            'pickup_for' if customer_1_demand < 0 else 'delivery_from']
+
+        routes[a].remove(customer_1)
+        routes[a].remove(customer_2)
+
+        # print(customer_1, customer_2,
+        #       self.json_instance[f'customer_{customer_1}'])
+
+        # 插入 b 路径
+        [j, k] = random.sample(range(len(routes[b]) + 1), 2)
+        if j > k:
+            j, k = k, j
+
+        routes[b].insert(
+            j, (customer_1 if customer_1_demand < 0 else customer_2))
+        routes[b].insert(
+            k, (customer_2 if customer_1_demand < 0 else customer_1))
+
+        # print(routes[a], routes[b])
+
+        # 可能存在空数组情况
+        if routes[a] == []:
+            routes.remove([])
+
+        return self.subrouteToRoutePDP(routes)
 
     # 在同一条路径内，取出一对订单的客户点，随机插入到另一个位置，插入时保证取货点在送货点之前
-    def opt_insert(self, route):
-        return route
+    def opt_insert(self, ind):
+        routes = self.routeToSubroutePDP(ind)
+        [a] = random.sample(range(len(routes)), 1)
+
+        # print(routes[a])
+
+        # 从 a 路径取出客户点
+        customer_1 = routes[a][random.randint(0, len(routes[a]) - 1)]
+        customer_1_demand = self.json_instance[f'customer_{customer_1}']['demand']
+        customer_2 = self.json_instance[f'customer_{customer_1}'][
+            'pickup_for' if customer_1_demand < 0 else 'delivery_from']
+
+        # print(customer_1, customer_2)
+
+        routes[a][routes[a].index(customer_1)] = 0
+        routes[a][routes[a].index(customer_2)] = 0
+
+        [j, k] = random.sample(range(len(routes[a]) + 2), 2)
+        if j > k:
+            j, k = k, j
+
+        routes[a].insert(
+            j, (customer_1 if customer_1_demand < 0 else customer_2))
+        routes[a].insert(
+            k, (customer_2 if customer_1_demand < 0 else customer_1))
+
+        while 0 in routes[a]:
+            routes[a].remove(0)
+
+        # print(routes[a])
+
+        return self.subrouteToRoutePDP(routes)
 
     # 随机在某条路径中，抽取两对订单的客户点，交换两个点单的对应的取送客户点的位置
-    def opt_swap(self, route):
-        return route
+    def opt_swap(self, ind):
+        routes = self.routeToSubroutePDP(ind)
+        [a] = random.sample(range(len(routes)), 1)
+
+        # 选出长度大于 2 的路径
+        while len(routes[a]) == 2:
+            [a] = random.sample(range(len(routes)), 1)
+
+        # print(routes[a])
+
+        # 从 a 路径取出客户点
+        customer_1 = routes[a][random.randint(0, len(routes[a]) - 1)]
+        customer_1_demand = self.json_instance[f'customer_{customer_1}']['demand']
+        customer_2 = self.json_instance[f'customer_{customer_1}'][
+            'pickup_for' if customer_1_demand < 0 else 'delivery_from']
+
+        # 确保 1 是取货，2 是送货
+        if customer_1_demand > 0:
+            customer_1, customer_2 = customer_2, customer_1
+
+        # 找到另一对客户点
+        temp_route = deepcopy(routes[a])
+        temp_route.remove(customer_1)
+        temp_route.remove(customer_2)
+        customer_3 = random.sample(temp_route, 1)[0]
+        customer_3_demand = self.json_instance[f'customer_{customer_3}']['demand']
+        customer_4 = self.json_instance[f'customer_{customer_3}'][
+            'pickup_for' if customer_3_demand < 0 else 'delivery_from']
+
+        # 确保 3 是取货，4 是送货
+        if customer_3_demand > 0:
+            customer_3, customer_4 = customer_4, customer_3
+
+        # print(customer_1, customer_2, customer_3, customer_4)
+
+        # 交换位置
+        e = routes[a].index(customer_1)
+        f = routes[a].index(customer_2)
+        g = routes[a].index(customer_3)
+        h = routes[a].index(customer_4)
+        routes[a][e], routes[a][g] = routes[a][g], routes[a][e]
+        routes[a][f], routes[a][h] = routes[a][h], routes[a][f]
+
+        # print(routes[a])
+
+        return self.subrouteToRoutePDP(routes)
 
     # 取送一体问题的路径生成算法
     def routeToSubroutePDP(self, ind):
