@@ -1,7 +1,9 @@
 from copy import deepcopy
+from math import floor
 import os
 import io
 import random
+from unittest import result
 import numpy
 import csv
 from functools import cmp_to_key
@@ -40,6 +42,9 @@ class nsgaAlgo():
 
         self.logbook = tools.Logbook()
         self.logbook.header = "generation", "fitness"
+
+        # 算子操作的最多执行次数
+        self.opt_stop_num = 100
 
         self.createCreators()
 
@@ -486,6 +491,27 @@ class nsgaAlgo():
 
         return round(A_Satisfaction * self.A * rate_a + B_Satisfaction * self.B * rate_b, 2), time_of_route
 
+    # 取送一体问题的混合算子操作
+    def opt_pdp(self, ind, gen):
+        # 单个算子当前的最多迭代次数
+        sn = 1 + floor(50 * (gen / self.num_gen))
+        # 包含所有路径的数组
+        routes = self.routeToSubroutePDP(ind)
+
+        return ind
+
+    # 随机取两个路径，从其中一个路径中取出一对订单的客户点，随机插入到另一个路径中
+    def opt_relocate(self, route):
+        return route
+
+    # 在同一条路径内，取出一对订单的客户点，随机插入到另一个位置，插入时保证取货点在送货点之前
+    def opt_insert(self, route):
+        return route
+
+    # 随机在某条路径中，抽取两对订单的客户点，交换两个点单的对应的取送客户点的位置
+    def opt_swap(self, route):
+        return route
+
     # 取送一体问题的路径生成算法
     def routeToSubroutePDP(self, ind):
         # 升序排列
@@ -561,7 +587,17 @@ class nsgaAlgo():
                 last_customer_id = 0
                 sub_route_time_cost = 0
 
+        if len(sub_route) > 0:
+            route.append(sub_route)
+
         return route
+
+    # pdp 路径转成个体
+    def subrouteToRoutePDP(self, routes):
+        result = []
+        for i in routes:
+            result += i
+        return result
 
     # 返回带子路径的二维数组
     def routeToSubroute(self, individual):
