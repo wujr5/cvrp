@@ -3,8 +3,6 @@ from math import floor
 import os
 import io
 import random
-from unittest import result
-import numpy
 import csv
 from functools import cmp_to_key
 import datetime
@@ -33,7 +31,7 @@ class nsgaAlgo():
         self.type = type
         self.toolbox = base.Toolbox()
 
-        self.A = 0.8  # 顾客时间窗左端（即 ready time）=0
+        self.A = 0.5  # 顾客时间窗左端（即 ready time）=0
         self.B = 1 - self.A  # 其余则为B类，A + B = 1
 
         # 车辆出发原点时间，0，表示 6:00，1 单位时间是 1 分钟
@@ -188,13 +186,13 @@ class nsgaAlgo():
         for gen in range(self.num_gen):
 
             # 选择用于交配的后代
-            self.parents = tools.selBest(self.pop, 90)
+            self.parents = tools.selBest(self.pop, 40)
 
             self.offsprings = []
 
             # 交配与变异操作
-            for i in range(90):
-                select = random.sample(list(range(90)), 2)
+            for i in range(40):
+                select = random.sample(list(range(40)), 2)
                 ind1 = self.parents[select[0]]
                 ind2 = self.parents[select[1]]
 
@@ -436,33 +434,34 @@ class nsgaAlgo():
                 sub_time_cost = sub_time_cost + self.getTimeCostByInputSpeed(
                     sub_time_cost, distance)
 
-                # 早到 left_edge 分钟内
-                if sub_time_cost >= (customer['ready_time'] - left_edge) and sub_time_cost < customer['ready_time']:
-                    customer_satisfaction += 100 * \
-                        (1 - (customer['ready_time'] -
-                         sub_time_cost) / left_edge)
-                # 早到
-                elif sub_time_cost < customer['ready_time']:
-                    customer_satisfaction += 0
-                # 刚好
-                elif sub_time_cost >= customer['ready_time'] and sub_time_cost <= customer['due_time']:
-                    customer_satisfaction += 100
-                # 迟到 right_edge 分钟内
-                elif sub_time_cost > customer['due_time'] and sub_time_cost <= (customer['due_time'] + right_edge):
-                    customer_satisfaction += 100 * \
-                        (1 - (sub_time_cost -
-                         customer['due_time']) / right_edge)
-                # 迟到
-                elif sub_time_cost > customer['due_time']:
-                    customer_satisfaction += 0
+                if self.json_instance[f'customer_{customer_id}']['demand'] < 0:
+                    # 早到 left_edge 分钟内
+                    if sub_time_cost >= (customer['ready_time'] - left_edge) and sub_time_cost < customer['ready_time']:
+                        customer_satisfaction += 100 * \
+                            (1 - (customer['ready_time'] -
+                                  sub_time_cost) / left_edge)
+                    # 早到
+                    elif sub_time_cost < customer['ready_time']:
+                        customer_satisfaction += 0
+                    # 刚好
+                    elif sub_time_cost >= customer['ready_time'] and sub_time_cost <= customer['due_time']:
+                        customer_satisfaction += 100
+                    # 迟到 right_edge 分钟内
+                    elif sub_time_cost > customer['due_time'] and sub_time_cost <= (customer['due_time'] + right_edge):
+                        customer_satisfaction += 100 * \
+                            (1 - (sub_time_cost -
+                                  customer['due_time']) / right_edge)
+                    # 迟到
+                    elif sub_time_cost > customer['due_time']:
+                        customer_satisfaction += 0
+
+                    if customer['ready_time'] == 0:
+                        A_Customer.append(customer_satisfaction)
+                    else:
+                        B_Customer.append(customer_satisfaction)
 
                 # 加上服务时间
                 sub_time_cost += customer['service_time']
-
-                if customer['ready_time'] == 0:
-                    A_Customer.append(customer_satisfaction)
-                else:
-                    B_Customer.append(customer_satisfaction)
 
                 last_customer_id = customer_id
 

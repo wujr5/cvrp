@@ -16,11 +16,11 @@ def main():
     # Parsing arguments
     parser = argparse.ArgumentParser()
 
-    parser.add_argument('--popSize', type=int, default=120, required=False,
+    parser.add_argument('--popSize', type=int, default=50, required=False,
                         help="Enter the population size")
     parser.add_argument('--pb', type=float, default=0.02, required=False,
                         help="Mutation Probabilty")
-    parser.add_argument('--gen', type=int, default=800, required=False,
+    parser.add_argument('--gen', type=int, default=500, required=False,
                         help="Number of generations to run")
     parser.add_argument('--file', type=str, default='lrc104', required=False,
                         help="算例")
@@ -33,7 +33,7 @@ def main():
 
     args = parser.parse_args()
 
-    nsgaObj = nsgaAlgo(popSize=120, mutProb=args.pb,
+    nsgaObj = nsgaAlgo(popSize=args.popSize, mutProb=args.pb,
                        numGen=args.gen, type=args.type, file=args.file, baseAl=args.base, time=args.time)
 
     typeObj = {1: '随机', 2: '定向'}
