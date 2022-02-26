@@ -38,7 +38,7 @@ def main():
 
     typeObj = {1: '随机', 2: '定向'}
     print(
-        f'种群大小：{args.popSize}，变异率：{args.pb}，初始化类型：{typeObj[args.type]}，迭代数：{args.gen}')
+        f'种群大小：{args.popSize}，变异率：{args.pb}，类型：{typeObj[args.type]}，迭代数：{args.gen}，时间：{args.time}')
 
     nsgaObj.runMain()
 

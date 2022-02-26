@@ -488,19 +488,11 @@ class nsgaAlgo():
 
     # 取送一体问题的路径生成算法
     def routeToSubroutePDP(self, ind):
-        # ind = [37, 36, 35, 38, 39, 40, 41, 44, 42, 43, 72, 54, 61, 71, 81, 96, 10, 11, 9, 12, 13, 14, 15, 47, 16, 17, 53, 78, 87, 99, 82, 52, 5, 3, 45, 1, 4, 105, 46, 8, 2, 6, 7, 100, 70, 79, 60, 58, 77, 59, 74, 75, 97, 86,
-        #        25, 101, 57, 23, 24, 21, 95, 56, 92, 84, 91, 62, 67, 94, 64, 103, 80, 66, 85, 102, 93, 50, 51, 63, 18, 48, 19, 49, 20, 22, 76, 104, 89, 83, 65, 90, 29, 31, 27, 34, 28, 30, 32, 26, 33, 68, 69, 73, 106, 88, 98, 55]
-
         # 升序排列
         def cmp(a, b):
             return a['i'] - b['i']
 
         rtnl_ind = deepcopy(ind)
-
-        # print(rtnl_ind)
-
-        # for i in rtnl_ind:
-        #     print(i, self.json_instance[f'customer_{i}'])
 
         max_load = self.json_instance['vehicle_capacity']
         speed = 1
@@ -511,7 +503,6 @@ class nsgaAlgo():
         last_customer_id = 0
         route = []
 
-        k = 0
         while len(rtnl_ind) > 0:
             customer = rtnl_ind[0]
             demand = self.json_instance[f'customer_{customer}']['demand']
@@ -525,8 +516,6 @@ class nsgaAlgo():
             if demand > 0 and delivery_from not in sub_route:
                 rtnl_ind.insert(len(rtnl_ind), customer)
                 del rtnl_ind[0]
-                # print('大于0：', customer,
-                #       self.json_instance[f'customer_{customer}'])
             # 已取货，送货点加入路径
             elif demand > 0 and delivery_from in sub_route:
                 sub_route.append(customer)
@@ -535,9 +524,7 @@ class nsgaAlgo():
                 sub_route_time_cost += service_time
                 last_customer_id = customer
                 rtnl_ind.remove(customer)
-                # print('移除1：', customer,
-                #       self.json_instance[f'customer_{customer}'])
-            # 满足取货条件，取货点加入路径
+            # 满足取货条件（取货客户点、满足车载量、满足右时间窗），取货点加入路径
             elif demand < 0 and (sub_route_load + abs(demand)) < max_load and (sub_route_time_cost + distance / speed) <= due_time:
                 sub_route.append(customer)
                 sub_route_load += demand
@@ -545,8 +532,6 @@ class nsgaAlgo():
                 sub_route_time_cost += service_time
                 last_customer_id = customer
                 rtnl_ind.remove(customer)
-                # print('移除2：', customer,
-                #       self.json_instance[f'customer_{customer}'])
             # 路径完成，计算新路径
             else:
                 # 缺失的送货点
@@ -560,10 +545,10 @@ class nsgaAlgo():
                             'i': rtnl_ind.index(c['pickup_for'])
                         })
 
+                # 基于缺失的客户点在个体中的相对顺序排序，index 小的排在前面
                 missing_customer.sort(key=cmp_to_key(cmp))
 
-                # print('缺失的客户点：', missing_customer)
-
+                # 将缺失的客户点加入到路径中
                 sub_route += map(lambda a: a['c'], missing_customer)
 
                 # 移除客户点
@@ -575,23 +560,14 @@ class nsgaAlgo():
                 sub_route_load = 0
                 last_customer_id = 0
                 sub_route_time_cost = 0
-                # print('加入路径：', route)
-                # print(customer,
-                #       self.json_instance[f'customer_{customer}'])
-
-        #     k += 1
-        #     if k > 1000:
-        #         exit()
-
-        # print('匹配完成', k, route)
-
-        # exit()
 
         return route
 
     # 返回带子路径的二维数组
     def routeToSubroute(self, individual):
-        return self.routeToSubroutePDP(individual)
+        pdp = True  # 取送一体 cvrp 问题
+        if pdp:
+            return self.routeToSubroutePDP(individual)
 
         route = []
         sub_route = []
