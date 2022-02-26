@@ -113,7 +113,7 @@ def converttext2json():
 def converttext2json_pdp():
     print(f'base directory is {BASE_DIR}')
     text_dir = os.path.join(BASE_DIR, 'data', 'pdp_100')
-    json_dir = os.path.join(BASE_DIR, 'data', 'pdp_json')
+    json_dir = os.path.join(BASE_DIR, 'data', 'json')
     print(f'text_dir is {text_dir}')
     print(f'json_dir is {json_dir}')
 
@@ -179,5 +179,5 @@ def converttext2json_pdp():
 
 
 if __name__ == "__main__":
-    # converttext2json_pdp()
-    converttext2json()
+    converttext2json_pdp()
+    # converttext2json()

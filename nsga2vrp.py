@@ -505,8 +505,6 @@ class nsgaAlgo():
         count_2 = 0  # insert 的次数
         count_3 = 0  # swap 的次数
 
-        k = 0
-
         while count_all < self.opt_stop_num:
             while count_1 < sn:
                 temp = self.opt_relocate(ind_new)
@@ -516,8 +514,6 @@ class nsgaAlgo():
                     count_all = 0
                 else:
                     count_1 += 1
-
-                k += 1
 
             count_all += count_1
 
@@ -530,8 +526,6 @@ class nsgaAlgo():
                 else:
                     count_2 += 1
 
-                k += 1
-
             count_all += count_2
 
             while count_3 < sn:
@@ -543,13 +537,7 @@ class nsgaAlgo():
                 else:
                     count_3 += 1
 
-                k += 1
-
             count_all += count_3
-
-            k += 1
-
-        # print('算子操作次数：', k)
 
         return creator.Individual(ind_new)
 
