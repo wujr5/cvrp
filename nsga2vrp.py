@@ -207,9 +207,9 @@ class nsgaAlgo():
                     self.offsprings += [new3, new4]
 
                     # 算子操作
-                    new5 = self.opt_pdp(new3, gen)
-                    new6 = self.opt_pdp(new4, gen)
-                    self.offsprings += [new5, new6]
+                    # new5 = self.opt_pdp(new3, gen)
+                    # new6 = self.opt_pdp(new4, gen)
+                    # self.offsprings += [new5, new6]
 
             for i in range(len(self.offsprings)):
                 # 重新计算适应值
@@ -495,7 +495,7 @@ class nsgaAlgo():
     # 取送一体问题的混合算子操作
     def opt_pdp(self, ind, gen):
         # 单个算子当前的最多迭代次数
-        sn = 1 + floor(50 * (gen / self.num_gen))
+        sn = 1 + floor(20 * (gen / self.num_gen))
         # 包含所有路径的数组
         ind_new = deepcopy(ind)
 
@@ -951,23 +951,25 @@ class nsgaAlgo():
         # Plotting is done, adding labels, Title
         plt.xlabel("X - Coordinate")
         plt.ylabel("Y - Coordinate")
-        plt.title(csv_title)
+        # plt.title(csv_title)
         plt.savefig(f"./figures/Route_{csv_title}.png")
 
     def plotFitness(self):
-        result1 = pd.read_csv('results/a101_result_base_18_1.csv')
-        result2 = pd.read_csv('results/a101_result_base_18_2.csv')
+        result1 = pd.read_csv('results/a_12_type1.csv')
+        result2 = pd.read_csv('results/a_12_type2.csv')
+        result3 = pd.read_csv('results/a_12_type2_opt.csv')
 
         plt.figure(figsize=(10, 10), dpi=144)
-        plt.plot(result1['index'], result1['fitness'])
-        plt.plot(result2['index'], result2['fitness'])
+        plt.plot(result1['generation'], result1['fitness'])
+        plt.plot(result2['generation'], result2['fitness'])
+        plt.plot(result3['generation'], result3['fitness'])
         plt.xlabel("Generations")
         plt.ylabel("Fitness")
-        plt.legend(['GA', 'IGA'], loc=0, ncol=2)
+        plt.legend(['GA', 'IGA', 'MA'], loc=0, ncol=2)
         # plt.title('7h')
-        plt.xlim(0, 500)
-        plt.ylim(7000, 18000)
-        plt.savefig(f"./figures/generation_fitness_18h.png")
+        plt.xlim(0, 400)
+        plt.ylim(11000, 25000)
+        plt.savefig(f"./figures/generation_fitness_12h_pdp.png")
 
     def runMain(self):
         self.init_generation()

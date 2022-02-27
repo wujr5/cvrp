@@ -4,11 +4,11 @@ import io
 import re
 import csv
 
-route1 = [5, 9, 13, 12, 11, 23, 17, 14, 21, 18, 25, 1, 4,
-          15, 27, 8, 19, 30, 16, 6, 29, 22, 24, 26, 10, 28, 2, 3, 20, 7]
+route1 = [13, 5, 9, 39, 20, 43, 50, 35, 7, 8, 19, 49, 18, 28, 37, 29, 26, 58, 59, 56, 38, 48, 6, 15, 4, 25, 12, 27, 36,
+          45, 34, 57, 55, 42, 1, 11, 22, 24, 23, 14, 17, 53, 31, 52, 54, 47, 41, 44, 16, 10, 21, 51, 40, 46, 30, 60, 2, 3, 32, 33]
 
-route2 = [18, 20, 7, 5, 9, 13, 12, 16, 24, 22, 1, 23, 17,
-          14, 21, 30, 28, 25, 11, 4, 15, 27, 8, 19, 29, 6, 26, 10, 2, 3]
+route2 = [7, 8, 37, 38, 9, 5, 39, 19, 49, 20, 50, 35, 16, 1, 23, 21, 31, 53, 51, 46, 10, 40, 25, 12, 13, 43, 42, 55, 4,
+          15, 11, 17, 14, 47, 41, 27, 44, 45, 34, 57, 18, 6, 24, 22, 36, 29, 28, 48, 30, 26, 52, 54, 58, 59, 56, 60, 2, 3, 32, 33]
 
 
 def main():
@@ -20,7 +20,7 @@ def main():
                         help="Enter the population size")
     parser.add_argument('--pb', type=float, default=0.02, required=False,
                         help="Mutation Probabilty")
-    parser.add_argument('--gen', type=int, default=500, required=False,
+    parser.add_argument('--gen', type=int, default=400, required=False,
                         help="Number of generations to run")
     parser.add_argument('--file', type=str, default='lrc104', required=False,
                         help="算例")
@@ -75,15 +75,15 @@ def run_30_times():
 
 
 def print_route():
-    nsgaObj = nsgaAlgo(popSize=120, mutProb=0.02, numGen=1000,
-                       type=2, file='a101', baseAl=2, time=12)
+    nsgaObj = nsgaAlgo(popSize=120, mutProb=0.02, numGen=400,
+                       type=2, file='lrc104', baseAl=2, time=12)
     nsgaObj.printRoute(route1)
 
 
 def plot_route():
-    nsgaObj = nsgaAlgo(popSize=120, mutProb=0.02, numGen=1000,
-                       type=2, file='a101', baseAl=2, time=12)
-    nsgaObj.plotRoute(route2, 'a101_18h')
+    nsgaObj = nsgaAlgo(popSize=120, mutProb=0.02, numGen=400,
+                       type=2, file='lrc104', baseAl=2, time=12)
+    nsgaObj.plotRoute(route2, 'a102_18h')
 
 
 def plot_fitness():
@@ -113,9 +113,9 @@ def parse():
 
 
 if __name__ == '__main__':
-    main()
+    # main()
     # run_30_times()
     # print_route()
-    # plot_route()
+    plot_route()
     # plot_fitness()
     # parse()
