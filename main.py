@@ -116,6 +116,6 @@ if __name__ == '__main__':
     # main()
     # run_30_times()
     # print_route()
-    plot_route()
-    # plot_fitness()
+    # plot_route()
+    plot_fitness()
     # parse()

@@ -860,7 +860,7 @@ class nsgaAlgo():
         # 满意度
         satisfaction = self.getSatisfaction(individual)[0]
 
-        return round(vehicles * 50 + total_distance * 100 + (100 - satisfaction) * 100, 2),
+        return round(vehicles * 200 + total_distance * 50 + (100 - satisfaction) * 50, 2),
 
     # 生成 csv 文件
 
@@ -968,7 +968,7 @@ class nsgaAlgo():
         plt.legend(['GA', 'IGA', 'MA'], loc=0, ncol=2)
         # plt.title('7h')
         plt.xlim(0, 400)
-        plt.ylim(11000, 25000)
+        plt.ylim(6500, 14000)
         plt.savefig(f"./figures/generation_fitness_12h_pdp.png")
 
     def runMain(self):
