@@ -42,6 +42,16 @@ def main():
 
     nsgaObj.runMain()
 
+    # 保存距离文件为 csv
+    # distance = nsgaObj.json_instance['distance_matrix']
+    # with open('distance-a102.csv', 'w', encoding='utf8') as csvfile:
+    #     csvfile.writelines(
+    #         'distance,' + ','.join(map(str, range(0, nsgaObj.ind_size + 1))) + '\n')
+
+    #     for i in range(len(distance)):
+    #         csvfile.writelines(
+    #             str(i) + ',' + ','.join(map(str, distance[i])) + '\n')
+
 
 def run_30_times():
 
@@ -113,9 +123,9 @@ def parse():
 
 
 if __name__ == '__main__':
-    # main()
+    main()
     # run_30_times()
     # print_route()
     # plot_route()
-    plot_fitness()
+    # plot_fitness()
     # parse()
