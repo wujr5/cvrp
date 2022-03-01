@@ -81,6 +81,7 @@ class nsgaAlgo():
                             hours=int(speed_config[-1][0]), minutes=int(speed_config[-1][1])))
 
                     speed_config[timegap.total_seconds() / 60] = speedstr
+                    # speed_config[timegap.total_seconds() / 60] = 30
 
                 speed = {0.0: 0.0}
                 time_keys = list(speed_config.keys())
@@ -91,14 +92,15 @@ class nsgaAlgo():
                 last_distance = 0
                 for t in time_keys:
                     for k in range(last_time, int(t)):
-                        speed[k + 1] = round(last_distance +
-                                             speed_config[t] *
-                                             (k + 1 - last_time) / 60, 2)
+                        for j in range(100 + 1):
+                            speed[k + j * 0.01] = round(last_distance +
+                                                        speed_config[t] *
+                                                        (k + j * 0.01 - last_time) / 60, 2)
 
                     last_time = int(t)
-                    last_distance = speed[int(t)]
-
+                    last_distance = speed[float(t)]
                 return speed
+
         return None
 
     # 设置 deap 库需要使用的各个函数
@@ -401,12 +403,12 @@ class nsgaAlgo():
 
         d = distance / 10
         find_d = 0
-        time_cost = 1
+        time_cost = 0
 
         while find_d < d:
-            find_d = self.speed[t + time_cost] - \
-                self.speed[float(t)]
-            time_cost += 1
+            find_d = self.speed[round(t + time_cost, 2)] - \
+                self.speed[round(t, 2)]
+            time_cost += 0.01
 
         return time_cost
 
@@ -425,6 +427,8 @@ class nsgaAlgo():
         for sub_route in all_sub_route:
             last_customer_id = 0
             sub_time_cost = 0
+
+            time_of_route_customer = []
 
             for customer_id in sub_route:
                 customer_satisfaction = 0
@@ -465,11 +469,14 @@ class nsgaAlgo():
 
                 last_customer_id = customer_id
 
+                time_of_route_customer.append(round(sub_time_cost, 2))
+
             # 回到送货点耗时
             sub_time_cost = sub_time_cost + self.getTimeCostByInputSpeed(
                 sub_time_cost, self.json_instance["distance_matrix"][last_customer_id][0])
 
-            time_of_route.append(sub_time_cost)
+            time_of_route_customer.append(round(sub_time_cost, 2))
+            time_of_route.append(time_of_route_customer)
 
         # 加权计算平均满意度
         A_Satisfaction = 0
@@ -806,7 +813,7 @@ class nsgaAlgo():
             sub_route_str = f'{sub_route_str} - 0'
             if not merge:
                 print(
-                    f'Vehicle {sub_route_count}\'s route: {sub_route_str}，时间：{time_of_route[index]}')
+                    f'Vehicle {sub_route_count}\'s route: {sub_route_str}\n\t时间：{time_of_route[index]}')
                 index += 1
             route_str = f'{route_str} - 0'
         if merge:
