@@ -180,4 +180,4 @@ def converttext2json_pdp():
 
 if __name__ == "__main__":
     converttext2json_pdp()
-    # converttext2json()
+    converttext2json()
