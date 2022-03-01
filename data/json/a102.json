@@ -489,7 +489,7 @@
         "demand": 20.0,
         "due_time": 30.0,
         "pickup_for": 0,
-        "ready_time": 20.0,
+        "ready_time": 15.0,
         "service_time": 2.0
     },
     "customer_47": {
@@ -501,7 +501,7 @@
         "demand": 10.0,
         "due_time": 30.0,
         "pickup_for": 0,
-        "ready_time": 20.0,
+        "ready_time": 15.0,
         "service_time": 2.0
     },
     "customer_48": {
@@ -513,7 +513,7 @@
         "demand": 21.0,
         "due_time": 30.0,
         "pickup_for": 0,
-        "ready_time": 20.0,
+        "ready_time": 15.0,
         "service_time": 2.0
     },
     "customer_49": {
@@ -525,7 +525,7 @@
         "demand": 20.0,
         "due_time": 30.0,
         "pickup_for": 0,
-        "ready_time": 20.0,
+        "ready_time": 15.0,
         "service_time": 2.0
     },
     "customer_5": {
@@ -549,7 +549,7 @@
         "demand": 43.0,
         "due_time": 30.0,
         "pickup_for": 0,
-        "ready_time": 20.0,
+        "ready_time": 15.0,
         "service_time": 2.0
     },
     "customer_51": {
@@ -561,7 +561,7 @@
         "demand": 15.0,
         "due_time": 40.0,
         "pickup_for": 0,
-        "ready_time": 30.0,
+        "ready_time": 25.0,
         "service_time": 2.0
     },
     "customer_52": {
@@ -573,7 +573,7 @@
         "demand": 40.0,
         "due_time": 40.0,
         "pickup_for": 0,
-        "ready_time": 30.0,
+        "ready_time": 25.0,
         "service_time": 2.0
     },
     "customer_53": {
@@ -585,7 +585,7 @@
         "demand": 10.0,
         "due_time": 40.0,
         "pickup_for": 0,
-        "ready_time": 30.0,
+        "ready_time": 25.0,
         "service_time": 2.0
     },
     "customer_54": {
@@ -597,7 +597,7 @@
         "demand": 10.0,
         "due_time": 40.0,
         "pickup_for": 0,
-        "ready_time": 30.0,
+        "ready_time": 25.0,
         "service_time": 2.0
     },
     "customer_55": {
@@ -609,7 +609,7 @@
         "demand": 26.0,
         "due_time": 40.0,
         "pickup_for": 0,
-        "ready_time": 30.0,
+        "ready_time": 25.0,
         "service_time": 2.0
     },
     "customer_56": {
@@ -621,7 +621,7 @@
         "demand": 10.0,
         "due_time": 50.0,
         "pickup_for": 0,
-        "ready_time": 40.0,
+        "ready_time": 35.0,
         "service_time": 2.0
     },
     "customer_57": {
@@ -633,7 +633,7 @@
         "demand": 25.0,
         "due_time": 50.0,
         "pickup_for": 0,
-        "ready_time": 40.0,
+        "ready_time": 35.0,
         "service_time": 2.0
     },
     "customer_58": {
@@ -645,7 +645,7 @@
         "demand": 20.0,
         "due_time": 50.0,
         "pickup_for": 0,
-        "ready_time": 40.0,
+        "ready_time": 35.0,
         "service_time": 2.0
     },
     "customer_59": {
@@ -657,7 +657,7 @@
         "demand": 41.0,
         "due_time": 50.0,
         "pickup_for": 0,
-        "ready_time": 40.0,
+        "ready_time": 35.0,
         "service_time": 2.0
     },
     "customer_6": {
@@ -681,7 +681,7 @@
         "demand": 20.0,
         "due_time": 50.0,
         "pickup_for": 0,
-        "ready_time": 40.0,
+        "ready_time": 35.0,
         "service_time": 2.0
     },
     "customer_7": {
