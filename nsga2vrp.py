@@ -42,7 +42,7 @@ class nsgaAlgo():
         self.logbook.header = "generation", "fitness"
 
         # 算子操作的最多执行次数
-        self.opt_stop_num = 100
+        self.opt_stop_num = 20
 
         self.createCreators()
 
@@ -209,9 +209,9 @@ class nsgaAlgo():
                     self.offsprings += [new3, new4]
 
                     # 算子操作
-                    # new5 = self.opt_pdp(new3, gen)
-                    # new6 = self.opt_pdp(new4, gen)
-                    # self.offsprings += [new5, new6]
+                    new5 = self.opt_pdp(new3, gen)
+                    new6 = self.opt_pdp(new4, gen)
+                    self.offsprings += [new5, new6]
 
             for i in range(len(self.offsprings)):
                 # 重新计算适应值
@@ -438,7 +438,7 @@ class nsgaAlgo():
                 sub_time_cost = sub_time_cost + self.getTimeCostByInputSpeed(
                     sub_time_cost, distance)
 
-                if self.json_instance[f'customer_{customer_id}']['demand'] < 0:
+                if self.json_instance[f'customer_{customer_id}']['demand'] > 0:
                     # 早到 left_edge 分钟内
                     if sub_time_cost >= (customer['ready_time'] - left_edge) and sub_time_cost < customer['ready_time']:
                         customer_satisfaction += 100 * \
@@ -692,10 +692,13 @@ class nsgaAlgo():
             due_time = self.json_instance[f'customer_{customer}']['due_time']
             service_time = self.json_instance[f'customer_{customer}']['service_time']
             distance = self.json_instance['distance_matrix'][last_customer_id][customer]
+            if demand < 0:
+                due_time = self.json_instance[f'customer_{pickup_for}']['due_time']
 
             # 还没取货，送货点放到最后
             if demand > 0 and delivery_from not in sub_route:
                 rtnl_ind.insert(len(rtnl_ind), customer)
+                # print('1: ', demand, rtnl_ind[0])
                 del rtnl_ind[0]
             # 已取货，送货点加入路径
             elif demand > 0 and delivery_from in sub_route:
@@ -705,6 +708,7 @@ class nsgaAlgo():
                 sub_route_time_cost += service_time
                 last_customer_id = customer
                 rtnl_ind.remove(customer)
+                # print('2: ', demand, customer)
             # 满足取货条件（取货客户点、满足车载量、满足右时间窗），取货点加入路径
             elif demand < 0 and (sub_route_load + abs(demand)) < max_load and (sub_route_time_cost + distance / speed) <= due_time:
                 sub_route.append(customer)
@@ -713,6 +717,7 @@ class nsgaAlgo():
                 sub_route_time_cost += service_time
                 last_customer_id = customer
                 rtnl_ind.remove(customer)
+                # print('3: ', demand, customer)
             # 路径完成，计算新路径
             else:
                 # 缺失的送货点
@@ -731,6 +736,8 @@ class nsgaAlgo():
 
                 # 将缺失的客户点加入到路径中
                 sub_route += map(lambda a: a['c'], missing_customer)
+
+                # print('4: ', sub_route, missing_customer)
 
                 # 移除客户点
                 for i in missing_customer:
